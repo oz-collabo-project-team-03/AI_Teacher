@@ -1,0 +1,15 @@
+__pycache__/
+.idea/
+venv/
+.vscode
+.mypy_cache
+
+src/.env*
+.coverage
+
+.DS_Store
+._.DS_Store
+**/.DS_Store
+**/._.DS_Store
+
+.python-version

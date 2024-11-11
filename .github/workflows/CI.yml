@@ -1,0 +1,105 @@
+# .github/workflows/CI.yml
+
+name: FastAPI CI
+
+# 트리거 이벤트 부분으로 코드가 푸시되거나 풀 리퀘스트가 생성될 때 CI가 실행됩니다.
+on:
+  pull_request:
+    branches:
+        - main
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: mysql:latest
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_ROOT_PASSWORD }}
+          MYSQL_USER: ${{ secrets.DB_USER }}
+          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_DB: ${{ secrets.DB_NAME }}
+
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    # CI 환경에서 코드를 체크아웃합니다.
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # CI 환경에서 사용할 파이썬 버젼을 지정합니다.
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12.7'
+
+    # - name: Cache Poetry
+    #   id: cache-poetry
+    #   uses: actions/cache@v3
+    #   with:
+    #     path: ~/.local
+    #     key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install Poetry
+      # if: steps.cache-poetry.outputs.cache-hit != 'true'
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "${HOME}/.local/bin" >> $GITHUB_PATH
+
+    # - name: Cache Poetry dependencies
+    #   id: cache-deps
+    #   uses: actions/cache@v3
+    #   with:
+    #     path: ~/.cache/pypoetry
+    #     key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+    #     restore-keys: |
+    #       ${{ runner.os }}-poetry-
+
+    - name: Check poetry.lock consistency
+      run: poetry lock --no-update
+
+    # Poetry를 사용하여 의존성 패키지들을 설치합니다.
+    - name: Install Packages & Libraries
+      # if: steps.cache-deps.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+
+    # isort를 사용하여 import 구문의 정렬 순서를 체크합니다.
+    - name: Run isort (Import sorting)
+      run: |
+        poetry run isort . --check --diff
+
+    # black을 사용하여 PEP8 코드스타일을 준수했는지 체크합니다.
+    - name: Run black (Code formatting)
+      run: |
+        poetry run black . --check
+
+    - name: Run flake8
+      run: poetry run flake8 .
+
+    # - name: Run mypy
+    #   run: poetry run mypy .
+
+    - name: Run pylint
+      run: poetry run pylint **/*.py
+
+    # - name: Run pytest
+    #   run: |
+    #     poetry run pytest tests/ --doctest-modules --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html
+    #   env:
+    #     DB_HOST: 127.0.0.1
+    #     DB_PORT: 3306
+    #     DB_USER: root
+    #     DB_PASSWORD: rootpassword
+    #     DB_NAME: testdb
+
+    # - name: Upload coverage reports to Codecov
+    #   uses: codecov/codecov-action@v3
+    #   env:
+    #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
