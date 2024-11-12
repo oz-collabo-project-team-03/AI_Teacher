@@ -1,8 +1,8 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+import os
 
 from dotenv import load_dotenv
-import os
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.declarative import declarative_base
 
 load_dotenv()
 
@@ -14,7 +14,7 @@ if DATABASE_URL is None:
 engine = create_async_engine(DATABASE_URL, echo=True)
 
 SessionLocal = async_sessionmaker(
-    engine=engine,
+    bind=engine,
     class_=AsyncSession,
     expire_on_commit=False,  # 트랜잭션 커밋 후에도 객체가 만료되지 않는 설정 값
     autocommit=False,
