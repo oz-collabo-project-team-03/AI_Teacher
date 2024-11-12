@@ -1,1 +1,1 @@
-from src.config.database.postgresql import SessionLocal, Base
+from src.config.database.postgresql import Base, SessionLocal

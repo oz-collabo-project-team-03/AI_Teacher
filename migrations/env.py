@@ -1,20 +1,24 @@
 import asyncio
+import os
 from logging.config import fileConfig
-from sqlalchemy import pool
+
 from alembic import context
 from dotenv import load_dotenv
-import os
+from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 # 모델 import
-from src.config.database import database_models
-from src.config.database import Base
+from src.config.database import Base, database_models
 
 load_dotenv()
 
 config = context.config
 
 database_url = os.environ.get("PG_DATABASE_URL")
+
+if database_url is None:
+    raise ValueError("Database URL environment variable 'PG_DATABASE_URL' is not set. ")
+
 config.set_main_option("sqlalchemy.url", database_url)
 
 if config.config_file_name is not None:
@@ -44,8 +48,13 @@ def do_run_migrations(connection):
 
 
 async def run_async_migrations() -> None:
+    config_section = config.get_section(config.config_ini_section)
+
+    if config_section is None:
+        raise ValueError(f"Configuration section {config.config_ini_section} not found")
+
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section),
+        config_section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

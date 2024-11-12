@@ -1,8 +1,9 @@
-from fastapi import APIRouter, FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+import logging
 import sys
 from pathlib import Path
-import logging
+
+from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -28,7 +29,6 @@ app.add_middleware(
 )
 
 api_router = APIRouter(prefix="/api/v1")
-
 
 
 if __name__ == "__main__":
