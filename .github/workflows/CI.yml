@@ -12,19 +12,22 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
+    env:
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+
     services:
-      # PostgreSQL 데이터베이스 서비스 설정
       db:
         image: postgres:latest
         ports:
           - 5433:5432
         env:
-          POSTGRES_USER: ${{ secrets.DB_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.DB_NAME }}
-
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+          POSTGRES_DB: ${{ env.DB_NAME }}
         options: >-
-          --health-cmd="pg_isready -U ${{ secrets.DB_USER }}"
+          --health-cmd="pg_isready -U ${{ env.DB_USER }}"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -84,7 +87,7 @@ jobs:
     # PostgreSQL이 준비될 때까지 대기: PostgreSQL의 준비 상태를 확인합니다.
     - name: Wait for PostgreSQL to be ready
       run: |
-        until pg_isready -h localhost -p 5432 -U ${{ secrets.DB_USER }}; do
+        until pg_isready -h localhost -p 5433 -U ${{ env.DB_USER }}; do
           echo "Waiting for PostgreSQL..."
           sleep 2
         done
@@ -102,11 +105,11 @@ jobs:
       run: |
         poetry run pytest tests/ --doctest-modules --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html
       env:
-        PG_DATABASE_URL: "postgresql+asyncpg://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@localhost:5432/${{ secrets.DB_NAME }}"
+        PG_DATABASE_URL: "postgresql+asyncpg://${{ env.DB_USER }}:${{ env.DB_PASSWORD }}@localhost:5433/${{ env.DB_NAME }}"
         REDIS_URL: "redis://localhost:6379"
         POSTGRES_DB_HOST: localhost
         POSTGRES_DB_PORT: 5433
-        POSTGRES_DB_USER: ${{ secrets.DB_USER }}
-        POSTGRES_DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-        POSTGRES_DB_NAME: ${{ secrets.DB_NAME }}
+        POSTGRES_DB_USER: ${{ env.DB_USER }}
+        POSTGRES_DB_PASSWORD: ${{ env.DB_PASSWORD }}
+        POSTGRES_DB_NAME: ${{ env.DB_NAME }}
 
