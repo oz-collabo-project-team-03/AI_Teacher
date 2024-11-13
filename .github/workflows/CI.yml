@@ -104,9 +104,9 @@ jobs:
       env:
         PG_DATABASE_URL: "postgresql+asyncpg://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@localhost:5432/${{ secrets.DB_NAME }}"
         REDIS_URL: "redis://localhost:6379"
-        DB_HOST: localhost
-        DB_PORT: 5433
-        DB_USER: ${{ secrets.DB_USER }}
-        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-        DB_NAME: ${{ secrets.DB_NAME }}
+        POSTGRES_DB_HOST: localhost
+        POSTGRES_DB_PORT: 5433
+        POSTGRES_DB_USER: ${{ secrets.DB_USER }}
+        POSTGRES_DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        POSTGRES_DB_NAME: ${{ secrets.DB_NAME }}
 
