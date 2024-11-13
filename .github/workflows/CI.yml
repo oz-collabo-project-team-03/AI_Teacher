@@ -17,7 +17,7 @@ jobs:
       db:
         image: postgres:latest
         ports:
-          - 5432:5432
+          - 5433:5432
         env:
           POSTGRES_USER: ${{ secrets.DB_USER }}
           POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -84,7 +84,7 @@ jobs:
     # PostgreSQL이 준비될 때까지 대기: PostgreSQL의 준비 상태를 확인합니다.
     - name: Wait for PostgreSQL to be ready
       run: |
-        until pg_isready -h 0:0:0:0 -p 5432 -U ${{ secrets.DB_USER }}; do
+        until pg_isready -h localhost -p 5432 -U ${{ secrets.DB_USER }}; do
           echo "Waiting for PostgreSQL..."
           sleep 2
         done
@@ -97,23 +97,16 @@ jobs:
           sleep 2
         done
 
-#pytest랑 커버리지는 나중에 생성 후 주석해제
+#     pytest 실행: PostgreSQL과 Redis에 대한 테스트 및 커버리지 리포트를 생성합니다.
+    - name: Run pytest
+      run: |
+        poetry run pytest tests/ --doctest-modules --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html
+      env:
+        PG_DATABASE_URL: "postgresql+asyncpg://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@localhost:5433/${{ secrets.DB_NAME }}"
+        REDIS_URL: "redis://localhost:6379"
+        DB_HOST: localhost
+        DB_PORT: 5433
+        DB_USER: ${{ secrets.DB_USER }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        DB_NAME: ${{ secrets.DB_NAME }}
 
-    # pytest 실행: PostgreSQL과 Redis에 대한 테스트 및 커버리지 리포트를 생성합니다.
-#    - name: Run pytest
-#      run: |
-#        poetry run pytest tests/ --doctest-modules --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html
-#      env:
-#        PG_DATABASE_URL: "postgresql+asyncpg://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@.0.0.0.0:5432/${{ secrets.DB_NAME }}"
-#        REDIS_URL: "redis://localhost:6379"
-#        DB_HOST: 0.0.0.0
-#        DB_PORT: 5432
-#        DB_USER: ${{ secrets.DB_USER }}
-#        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-#        DB_NAME: ${{ secrets.DB_NAME }}
-
-    # Codecov에 커버리지 리포트 업로드: 테스트 커버리지 결과를 Codecov에 업로드합니다.
-#    - name: Upload coverage reports to Codecov
-#      uses: codecov/codecov-action@v3
-#      with:
-#        token: ${{ secrets.CODECOV_TOKEN }}
