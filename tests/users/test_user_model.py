@@ -1,16 +1,18 @@
-import pytest
 from datetime import datetime
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
-from src.config.database import Base
+from src.app.common.utils.consts import SocialProvider, UserRole
 from src.app.v1.user.entity.user import User
-from src.app.common.utils.consts import UserRole, SocialProvider
+from src.config.database import Base
 
 TEST_DATABASE_URL = "postgresql+psycopg2://postgres:qwe123@localhost/test_db"
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def fake_db():
     engine = create_engine(TEST_DATABASE_URL, echo=True)
     Base.metadata.create_all(bind=engine)
@@ -22,7 +24,9 @@ def fake_db():
     session.close()
     # 테스트 완료 후 데이터베이스를 유지하고 싶다면 주석 처리
     Base.metadata.drop_all(bind=engine)
-#user 인스턴스 생성해서 세션에 추가한 후 커밋 후 생성된 유저가 데이터베이스 존재하는지 확인
+
+
+# user 인스턴스 생성해서 세션에 추가한 후 커밋 후 생성된 유저가 데이터베이스 존재하는지 확인
 def test_create_user(fake_db):
     user = User(
         id=1,
@@ -46,7 +50,7 @@ def test_create_user(fake_db):
     assert retrieved_user.updated_at is not None
 
 
-#email->unique 여서 같은 이메일 가진 두 user 인스턴스 생성시 IntegrityError 발생 확인
+# email->unique 여서 같은 이메일 가진 두 user 인스턴스 생성시 IntegrityError 발생 확인
 def test_unique_email(fake_db):
 
     user1 = User(
@@ -90,4 +94,3 @@ def test_defaults(fake_db):
     assert retrieved_user.is_active is True
     assert isinstance(retrieved_user.created_at, datetime)
     assert isinstance(retrieved_user.updated_at, datetime)
-
