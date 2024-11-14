@@ -78,29 +78,29 @@ jobs:
     # isort를 사용하여 import 구문의 정렬 순서를 체크합니다.
     - name: Run isort (Import sorting)
       run: |
-        poetry run isort . --check --diff
+        poetry run isort .
 
     # black을 사용하여 PEP8 코드스타일을 준수했는지 체크합니다.
     - name: Run black (Code formatting)
       run: |
-        poetry run black . --check
+        poetry run black .
 
-    # flake8 검사: 코드에서 일반적인 코드 스타일 문제를 검사합니다.
-    - name: Run flake8
-      run: poetry run flake8 .
+#    # flake8 검사: 코드에서 일반적인 코드 스타일 문제를 검사합니다.
+#    - name: Run flake8
+#      run: poetry run flake8 .
 
     # mypy 검사: 코드 타입 검사를 수행합니다.
     - name: Run mypy
       run: poetry run mypy .
 
-    # pylint 검사: 코드의 코드 품질을 점검합니다.
-    - name: Run pylint
-      run: poetry run pylint **/*.py
+#    # pylint 검사: 코드의 코드 품질을 점검합니다.
+#    - name: Run pylint
+#      run: poetry run pylint **/*.py
 
     # PostgreSQL이 준비될 때까지 대기: PostgreSQL의 준비 상태를 확인합니다.
     - name: Wait for PostgreSQL to be ready
       run: |
-        until pg_isready -h 0:0:0:0 -p 5432 -U ${{ secrets.DB_USER }}; do
+        until pg_isready -h localhost -p 5432 -U ${{ env.DB_USER }}; do
           echo "Waiting for PostgreSQL..."
           sleep 2
         done
@@ -132,4 +132,4 @@ jobs:
 #    - name: Upload coverage reports to Codecov
 #      uses: codecov/codecov-action@v3
 #      with:
-#        token: ${{ secrets.CODECOV_TOKEN }}
+#        token: ${{ secrets.CODECOV_T

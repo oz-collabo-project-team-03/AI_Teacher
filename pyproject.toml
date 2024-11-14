@@ -22,6 +22,7 @@ isort = "^5.13.2"
 mypy = "^1.13.0"
 coverage = "^7.6.4"
 pytest = "^8.3.3"
+psycopg2-binary = "^2.9.10"
 
 [tool.black]
 line-length = 150
