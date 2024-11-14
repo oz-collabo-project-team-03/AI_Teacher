@@ -21,7 +21,7 @@ jobs:
       postgres:
         image: postgres:latest
         ports:
-          - 5433:5432
+          - 5432:5432
         env:
           POSTGRES_USER: ${{ env.DB_USER }}
           POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
@@ -100,7 +100,7 @@ jobs:
     # PostgreSQL이 준비될 때까지 대기: PostgreSQL의 준비 상태를 확인합니다.
     - name: Wait for PostgreSQL to be ready
       run: |
-        until pg_isready -h localhost -p 5433 -U ${{ env.DB_USER }}; do
+        until pg_isready -h localhost -p 5432 -U ${{ env.DB_USER }}; do
           echo "Waiting for PostgreSQL..."
           sleep 2
         done
