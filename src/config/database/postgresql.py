@@ -11,7 +11,12 @@ DATABASE_URL = os.environ.get("PG_DATABASE_URL")
 # DATABASE_URL이 None인 경우 처리
 if DATABASE_URL is None:
     raise ValueError("PG_DATABASE_URL environment variable is not set")
-engine = create_async_engine(DATABASE_URL, echo=True)
+
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=True,
+    connect_args={"server_settings": {"timezone": "Asia/Seoul"}},
+)
 
 SessionLocal = async_sessionmaker(
     bind=engine,
