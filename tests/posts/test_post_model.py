@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from src.app.common.utils.consts import SocialProvider, UserRole, Visibility
-from src.app.v1.post.enitity.post import Post
+from src.app.v1.post.entity.post import Post
 from src.app.v1.user.entity.user import User
 from src.config.database.postgresql import Base, engine
 
