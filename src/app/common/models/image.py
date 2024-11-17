@@ -1,5 +1,6 @@
-from sqlalchemy import BigInteger, String, Numeric
+from sqlalchemy import BigInteger, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from src.config.database import Base
 
 

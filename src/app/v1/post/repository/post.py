@@ -1,10 +1,13 @@
-from src.config.database.postgresql import SessionLocal
+from ulid import ulid
+
 from src.app.v1.post.entity.post import Post
+from src.app.v1.post.schema.post import PostCreateRequest
+from src.config.database.postgresql import SessionLocal
 
 
 class PostRepository:
     @staticmethod
-    async def create_post(post: Post):
+    async def create_post(user_id: str, post_id: ulid, post: PostCreateRequest):
         raise NotImplementedError
 
     @staticmethod
