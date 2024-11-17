@@ -1,4 +1,4 @@
-from ulid import ulid
+from ulid import ulid  # type: ignore
 
 from src.app.v1.post.entity.post import Post
 from src.app.v1.post.schema.post import PostCreateRequest

@@ -10,6 +10,6 @@ router = APIRouter(prefix="/posts", tags=["posts"])
 
 @router.post("/write")
 async def post_write(post: PostCreateRequest, post_service: PostService = Depends(PostService)):
-    user_id = ...
+    user_id = "some_user_id"
 
     return await post_service.create_post(user_id=user_id, post=post)

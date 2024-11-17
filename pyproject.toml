@@ -32,9 +32,6 @@ line-length = 150
 [tool.isort]
 profile = "black"
 
-[mypy]
-ignore_missing_imports = true
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
