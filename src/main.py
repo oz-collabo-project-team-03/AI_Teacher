@@ -15,7 +15,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 # 여기부터 router 추가
-from src.app.router.v1.post import router as post_router
+from src.app.router import post_router
 
 app = FastAPI(debug=True)
 
