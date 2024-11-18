@@ -1,5 +1,5 @@
-from sqlalchemy import BigInteger, Enum, ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import BigInteger, Enum, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column
 
 from src.app.common.utils.consts import GradeNumber
 from src.config.database import Base
