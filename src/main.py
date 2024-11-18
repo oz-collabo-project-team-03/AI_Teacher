@@ -27,7 +27,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_origin_regex="http://111\.111\.111\.111(:\d+)?",
+    allow_origin_regex="http://111\\.111\\.111\\.111(:\\d+)?",
     allow_methods=["*"],
     allow_headers=["*"],
 )

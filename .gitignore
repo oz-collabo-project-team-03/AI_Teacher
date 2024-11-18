@@ -9,6 +9,8 @@ src/.env*
 
 .env
 
+migrations/versions/*
+
 .DS_Store
 ._.DS_Store
 **/.DS_Store
