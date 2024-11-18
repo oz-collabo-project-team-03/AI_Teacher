@@ -16,10 +16,13 @@ sys.path.append(str(project_root))
 
 # 여기부터 router 추가
 from src.app.router import post_router
+from src.app.router.v1.user import router as user_router
 
 app = FastAPI(debug=True)
 
 app.include_router(post_router)
+
+app.include_router(user_router)
 
 origins = ["https://daesik.store", "http://localhost:5173", "https://localhost:5173"]
 

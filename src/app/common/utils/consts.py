@@ -17,3 +17,9 @@ class Visibility(PyEnum):
     PRIVATE = "private"
     TEACHER = "teacher"
     STUDENT = "student"
+
+
+class GradeNumber(PyEnum):
+    FIRST_GRADE = "1학년"
+    SECOND_GRADE = "2학년"
+    THIRD_GRADE = "3학년"
