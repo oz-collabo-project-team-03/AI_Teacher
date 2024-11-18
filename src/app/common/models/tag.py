@@ -8,7 +8,5 @@ class Tag(Base):
     __tablename__ = "tags"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    nickname: Mapped[str] = mapped_column(String(12), Unique=True, nullable=False)
+    nickname: Mapped[str] = mapped_column(String(12), unique=True, nullable=False)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
-
-
