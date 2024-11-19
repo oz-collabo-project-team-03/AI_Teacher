@@ -1,4 +1,5 @@
 import logging
+import os
 import platform
 import subprocess
 import sys
@@ -40,8 +41,13 @@ def run_check_script():
 
     if system == "darwin":  # Mac OS
         script_path = "./scripts/check.sh"
+    elif system == "linux":
+        script_path = "./scripts/check.sh"
     elif system == "windows":
-        script_path = "./scripts/check.bat"
+        script_path = os.path.join(project_root, "scripts", "check.bat")
+    else:
+        print(f"Unsupported operating system: {system}")
+        return
 
     try:
         print(f"Running {script_path}...")
