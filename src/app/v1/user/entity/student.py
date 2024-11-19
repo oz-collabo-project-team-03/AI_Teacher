@@ -15,4 +15,3 @@ class Student(Base):
     interest: Mapped[str] = mapped_column(String(30), nullable=True)
     description: Mapped[str] = mapped_column(String(25), nullable=False)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
-
