@@ -22,7 +22,7 @@ app = FastAPI(debug=True)
 
 app.include_router(post_router)
 
-origins = ["https://daesik.store", "http://localhost:5173", "https://localhost:5173"]
+origins = ["http://localhost:5173", "https://localhost:5173"]
 
 app.add_middleware(
     CORSMiddleware,
