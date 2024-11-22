@@ -4,7 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from src.config.database import Base
 
 
-class Study_group(Base):
+class StudyGroup(Base):
     __tablename__ = "study_groups"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)

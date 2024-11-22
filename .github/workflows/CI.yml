@@ -52,6 +52,7 @@ jobs:
       run: |
         sudo apt-get install -y redis-tools
         redis-cli ping
+
     # 코드 체크아웃: 리포지토리의 코드를 가져옵니다.
     - name: Checkout code
       uses: actions/checkout@v4

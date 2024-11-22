@@ -1,9 +1,19 @@
 from enum import Enum
 
+from pydantic import BaseModel
+
 
 class UserRole(Enum):
-    student = "student"
-    teacher = "teacher"
+    STUDENT = "student"
+    TEACHER = "teacher"
+
+
+class User(BaseModel):
+    role: UserRole
+
+
+user = User(role=UserRole.STUDENT)
+user = User(role=UserRole.TEACHER)
 
 
 class SocialProvider(Enum):
@@ -20,9 +30,9 @@ class Visibility(Enum):
 
 
 class GradeNumber(Enum):
-    FIRST_GRADE = "1학년"
-    SECOND_GRADE = "2학년"
-    THIRD_GRADE = "3학년"
+    FIRST_GRADE = "1"
+    SECOND_GRADE = "2"
+    THIRD_GRADE = "3"
 
 
 class MessageType(Enum):
