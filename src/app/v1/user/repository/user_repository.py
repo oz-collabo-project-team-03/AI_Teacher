@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from src.app.common.models.tag import Tag
-from src.app.common.utils.consts import GradeNumber, UserRole
+from src.app.common.utils.consts import UserRole
 from src.app.common.utils.verify_password import hash_password
 from src.app.v1.user.entity.organization import Organization
 from src.app.v1.user.entity.student import Student
@@ -67,7 +67,7 @@ class UserRepository:
                 student = Student(
                     user_id=user.id,
                     school=student_data["school"],
-                    grade=GradeNumber(student_data["grade"]).value,
+                    grade=int(student_data.get("grade")),
                     career_aspiration=student_data.get("career_aspiration"),
                     interest=student_data.get("interest"),
                 )
@@ -145,10 +145,7 @@ class UserRepository:
                         raise HTTPException(status_code=404, detail="학생 데이터를 찾을 수 없습니다.")
                     for field in self.ALLOWED_STUDENT_FIELDS:
                         if field in update_data:
-                            if field == "grade":
-                                setattr(student, field, GradeNumber(update_data[field]))
-                            else:
-                                setattr(student, field, update_data[field])
+                            setattr(student, field, update_data[field])
 
                 return user
             except SQLAlchemyError as e:

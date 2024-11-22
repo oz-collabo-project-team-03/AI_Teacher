@@ -19,12 +19,10 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
+
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Access Token이 제공되지 않았습니다."
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access Token이 제공되지 않았습니다.")
     payload = verify_access_token(token)
     return {
         "access_token": token,

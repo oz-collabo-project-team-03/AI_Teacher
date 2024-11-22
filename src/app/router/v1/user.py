@@ -1,7 +1,6 @@
 from typing import Annotated, Union
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Response
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.utils.dependency import get_current_user, get_session
@@ -67,14 +66,12 @@ async def refresh_access_token(refresh_token: str, session: AsyncSession = Depen
 
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout_user(
-    response: Response,
-    current_user: dict = Depends(get_current_user)
-):
+async def logout_user(response: Response, current_user: dict = Depends(get_current_user)):
     return await user_service.logout_user(
         access_token=current_user["access_token"],
         response=response,
     )
+
 
 @router.post("/find-email", response_model=EmailResponse)
 async def find_email_by_phone(payload: PhoneRequest, session: AsyncSession = Depends(get_session)):

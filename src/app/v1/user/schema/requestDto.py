@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from src.app.common.utils.consts import GradeNumber, UserRole
+from src.app.common.utils.consts import UserRole
 
 
 class EmailRequest(BaseModel):
@@ -24,7 +24,7 @@ class StudentRegisterRequest(BaseModel):
     is_privacy_accepted: bool
     role: UserRole = UserRole.STUDENT
     school: str
-    grade: GradeNumber
+    grade: int
     career_aspiration: str | None
     interests: str | None
 
@@ -83,7 +83,7 @@ class UpdateUserInfoRequest(BaseModel):
         is_privacy_accepted: bool
         role: UserRole = UserRole.STUDENT
         school: str
-        grade: GradeNumber
+        grade: int
         career_aspiration: str | None
         interests: str | None
 
@@ -120,4 +120,4 @@ class UpdateUserInfoRequest(BaseModel):
         password_confirm: str
         phone: str
         school: str
-        grade: GradeNumber
+        grade: int
