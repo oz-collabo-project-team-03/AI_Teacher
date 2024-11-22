@@ -17,6 +17,7 @@ from src.app.v1.user.schema.requestDto import (
     UpdateUserInfoRequest,
 )
 from src.app.v1.user.schema.responseDto import (
+    AccessTokenResponse,
     EmailResponse,
     MessageResponse,
     TokenResponse,
@@ -60,7 +61,7 @@ async def login_user(payload: LoginRequest, response: Response, session: AsyncSe
     return await user_service.login_user(email=payload.email, password=payload.password, response=response, session=session)
 
 
-@router.post("/token/refresh", response_model=TokenResponse)
+@router.post("/token/refresh", response_model=AccessTokenResponse)
 async def refresh_access_token(refresh_token: str, session: AsyncSession = Depends(get_session)):
     return await user_service.refresh_access_token(refresh_token=refresh_token, session=session)
 

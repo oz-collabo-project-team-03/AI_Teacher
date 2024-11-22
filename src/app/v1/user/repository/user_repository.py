@@ -25,9 +25,14 @@ class UserRepository:
         try:
             query = select(User).options(selectinload(User.student), selectinload(User.teacher))
             for key, value in kwargs.items():
+                if key == "id":
+                    value = int(value)  # user_id를 정수로 변환
                 query = query.filter(getattr(User, key) == value)
             result = await session.execute(query)
             return result.scalars().first()
+        except ValueError as e:
+            logger.error(f"Invalid type for key {key}: {value}. Error: {e}")
+            raise HTTPException(status_code=400, detail="잘못된 데이터 형식입니다.")
         except SQLAlchemyError as e:
             logger.error(f"Failed to fetch user: {e}")
             raise HTTPException(status_code=500, detail="데이터베이스 조회 중 오류가 발생했습니다.")

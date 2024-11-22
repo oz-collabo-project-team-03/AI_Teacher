@@ -1,24 +1,29 @@
+import logging
 import os
 
 import redis.asyncio as redis
 from fastapi import HTTPException
 
+from src.app.common.utils.security import verify_access_token
+
+# Redis 클라이언트 초기화
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
 
+# TTL 설정
+REFRESH_TOKEN_TTL = 7 * 24 * 3600  # 7일
+JTI_TTL = 15 * 60  # 15분
 
-async def test_redis_connection():
-    try:
-        pong = await redis_client.ping()
-        print(f"Redis 연결 성공: {pong}")
-    except Exception as e:
-        print(f"Redis 연결 실패: {e}")
+# 로거 설정
+logger = logging.getLogger(__name__)
 
 
+# Redis 작업 함수
 async def save_to_redis(key: str, value: str, expiry: int):
     try:
         await redis_client.set(key, value, ex=expiry)
     except Exception as e:
+        logger.error(f"Redis 저장 오류 (Key: {key}): {e}")
         raise HTTPException(status_code=500, detail=f"Redis 저장 오류: {str(e)}")
 
 
@@ -26,6 +31,7 @@ async def get_from_redis(key: str) -> str | None:
     try:
         return await redis_client.get(key)
     except Exception as e:
+        logger.error(f"Redis 조회 오류 (Key: {key}): {e}")
         raise HTTPException(status_code=500, detail=f"Redis 조회 오류: {str(e)}")
 
 
@@ -33,9 +39,11 @@ async def delete_from_redis(key: str):
     try:
         await redis_client.delete(key)
     except Exception as e:
+        logger.error(f"Redis 삭제 오류 (Key: {key}): {e}")
         raise HTTPException(status_code=500, detail=f"Redis 삭제 오류: {str(e)}")
 
 
+# Redis 키 생성 함수
 def get_redis_key_jti(jti: str) -> str:
     return f"jti:{jti}"
 
@@ -44,20 +52,28 @@ def get_redis_key_refresh_token(user_id: int) -> str:
     return f"refresh_token:{user_id}"
 
 
+# 블랙리스트 관리 함수
 async def add_to_blacklist(token: str, expiry: int):
-    await save_to_redis(f"blacklist:{token}", "blacklisted", expiry)
+    try:
+        jti = verify_access_token(token).get("jti")
+        if jti:
+            redis_key = get_redis_key_jti(jti)
+            await save_to_redis(redis_key, "used", expiry)
+    except Exception as e:
+        logger.error(f"블랙리스트 추가 오류 (Token: {token}): {e}")
+        raise HTTPException(status_code=500, detail="블랙리스트 추가 중 오류가 발생했습니다.")
 
 
-async def is_blacklisted(token: str) -> bool:
-    return await get_from_redis(f"blacklist:{token}") is not None
-
-
-async def is_jti_used(jti: str) -> bool:
+async def is_blacklisted(jti: str) -> bool:
     return await get_from_redis(f"jti:{jti}") is not None
 
 
 async def mark_jti_used(jti: str, expiry: int):
-    await save_to_redis(f"jti:{jti}", "used", expiry)
+    try:
+        await save_to_redis(f"jti:{jti}", "used", expiry)
+    except Exception as e:
+        logger.error(f"JTI 사용 마크 오류 (JTI: {jti}): {e}")
+        raise HTTPException(status_code=500, detail="JTI 사용 처리 중 오류가 발생했습니다.")
 
 
 # 여기부터 로직 확인
