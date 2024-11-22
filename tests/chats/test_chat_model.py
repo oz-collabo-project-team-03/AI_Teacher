@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.future import select
 
 from src.app.common.utils.consts import MessageType, SocialProvider, UserRole
-from src.app.v1.chat.entity.participant import Participant
 from src.app.v1.chat.entity.message import Message
+from src.app.v1.chat.entity.participant import Participant
 from src.app.v1.chat.entity.room import Room
 from src.app.v1.user.entity.user import User
 from src.config.database import Base

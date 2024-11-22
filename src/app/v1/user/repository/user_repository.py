@@ -67,7 +67,7 @@ class UserRepository:
                 student = Student(
                     user_id=user.id,
                     school=student_data["school"],
-                    grade=int(student_data.get("grade")),
+                    grade=student_data.get("grade"),
                     career_aspiration=student_data.get("career_aspiration"),
                     interest=student_data.get("interest"),
                 )

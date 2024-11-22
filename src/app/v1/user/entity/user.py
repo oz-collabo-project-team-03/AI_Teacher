@@ -28,3 +28,4 @@ class User(Base):
 
     student = relationship("Student", back_populates="user", uselist=False)
     teacher = relationship("Teacher", back_populates="user", uselist=False)
+    tag = relationship("Tag", back_populates="user", uselist=False)

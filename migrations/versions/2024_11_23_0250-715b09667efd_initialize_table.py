@@ -1,8 +1,8 @@
 """Initialize table
 
-Revision ID: b52dd26cfa21
+Revision ID: 715b09667efd
 Revises: 
-Create Date: 2024-11-23 01:26:55.767438
+Create Date: 2024-11-23 02:50:11.733389
 
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "b52dd26cfa21"
+revision: str = "715b09667efd"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -54,7 +54,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("phone"),
     )
     op.create_table(
-        "chat_participants",
+        "participants",
         sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("user_id", sa.BigInteger(), nullable=False),
         sa.Column("room_id", sa.BigInteger(), nullable=False),
@@ -62,22 +62,6 @@ def upgrade() -> None:
             ["room_id"],
             ["rooms.id"],
         ),
-        sa.ForeignKeyConstraint(
-            ["user_id"],
-            ["users.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_table(
-        "messages",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column("room_id", sa.BigInteger(), nullable=False),
-        sa.Column("content", sa.String(length=300), nullable=False),
-        sa.Column("type", sa.Enum("TEXT", "IMAGE", name="messagetype"), nullable=False),
-        sa.Column("read_checked", sa.Boolean(), nullable=False),
-        sa.Column("user_id", sa.BigInteger(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), server_default=sa.text("now()"), nullable=False),
         sa.ForeignKeyConstraint(
             ["user_id"],
             ["users.id"],
@@ -151,6 +135,27 @@ def upgrade() -> None:
             ["users.id"],
         ),
         sa.ForeignKeyConstraint(["post_id"], ["posts.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "messages",
+        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
+        sa.Column("participant_id", sa.BigInteger(), nullable=False),
+        sa.Column("room_id", sa.BigInteger(), nullable=False),
+        sa.Column("content", sa.String(length=300), nullable=False),
+        sa.Column("type", sa.Enum("TEXT", "IMAGE", name="messagetype"), nullable=False),
+        sa.Column("read_checked", sa.Boolean(), nullable=False),
+        sa.Column("created_at", sa.DateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", sa.DateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["participant_id"],
+            ["participants.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["users.id"],
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -243,13 +248,13 @@ def downgrade() -> None:
     op.drop_table("recomments")
     op.drop_table("post_images")
     op.drop_table("organizations")
+    op.drop_table("messages")
     op.drop_table("comments")
     op.drop_table("teachers")
     op.drop_table("tags")
     op.drop_table("students")
     op.drop_table("posts")
-    op.drop_table("messages")
-    op.drop_table("chat_participants")
+    op.drop_table("participants")
     op.drop_table("users")
     op.drop_table("rooms")
     op.drop_table("images")
