@@ -42,7 +42,6 @@ def verify_access_token(token: str):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Refresh Token이 만료되었습니다.")
+        raise HTTPException(status_code=401, detail="access Token이 만료되었습니다.")
     except jwt.InvalidTokenError as e:
-        print(f"Invalid Token Error: {e}")
-        raise HTTPException(status_code=401, detail="유효하지 않은 Refresh Token입니다.")
+        raise HTTPException(status_code=401, detail="유효하지 않은 access Token입니다.")
