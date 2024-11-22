@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.future import select
 
 from src.app.common.utils.consts import MessageType, SocialProvider, UserRole
-from src.app.v1.chat.entity.chat_participant import ChatParticipant
+from src.app.v1.chat.entity.participant import Participant
 from src.app.v1.chat.entity.message import Message
 from src.app.v1.chat.entity.room import Room
 from src.app.v1.user.entity.user import User
@@ -46,7 +46,7 @@ async def test_user(async_session):
             email="test@example.com",
             password="hashed_password",
             social_provider=SocialProvider.KAKAO,
-            role=UserRole.student,
+            role=UserRole.STUDENT,
             is_active=True,
             is_privacy_accepted=True,
         )
@@ -92,12 +92,12 @@ async def test_채팅_참여자_생성(async_session, test_user):
     async_session.add(room)
     await async_session.flush()
 
-    participant = ChatParticipant(user_id=test_user.id, room_id=room.id)
+    participant = Participant(user_id=test_user.id, room_id=room.id)
     async_session.add(participant)
     await async_session.commit()
 
     # 참여자가 성공적으로 생성되었는지 확인
-    result = await async_session.execute(select(ChatParticipant).filter_by(user_id=test_user.id, room_id=room.id))
+    result = await async_session.execute(select(Participant).filter_by(user_id=test_user.id, room_id=room.id))
     created_participant = result.scalar_one_or_none()
     assert created_participant is not None
 

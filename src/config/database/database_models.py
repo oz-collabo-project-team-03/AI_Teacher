@@ -1,6 +1,6 @@
 from src.app.common.models.image import Image
 from src.app.common.models.tag import Tag
-from src.app.v1.chat.entity.chat_participant import ChatParticipant
+from src.app.v1.chat.entity.participant import ChatParticipant
 from src.app.v1.chat.entity.message import Message
 from src.app.v1.chat.entity.room import Room
 from src.app.v1.comment.entity.comment import Comment
