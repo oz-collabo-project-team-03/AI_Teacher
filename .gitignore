@@ -17,4 +17,3 @@ migrations/versions/*
 **/._.DS_Store
 
 .python-version
-migrations
