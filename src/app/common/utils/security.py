@@ -3,13 +3,13 @@ import json
 import os
 from datetime import datetime, timedelta
 
+import jwt
 from dotenv import load_dotenv
-from fastapi import HTTPException, status
-from jose import jwt  # type: ignore
+from fastapi import HTTPException
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY", "default_secret_key")
 ALGORITHM = "HS256"
 
 
@@ -42,6 +42,7 @@ def verify_access_token(token: str):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access Token이 만료되었습니다.")
-    except jwt.JWTError:  # type: ignore
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="유효하지 않은 Access Token입니다.")
+        raise HTTPException(status_code=401, detail="Refresh Token이 만료되었습니다.")
+    except jwt.InvalidTokenError as e:
+        print(f"Invalid Token Error: {e}")
+        raise HTTPException(status_code=401, detail="유효하지 않은 Refresh Token입니다.")

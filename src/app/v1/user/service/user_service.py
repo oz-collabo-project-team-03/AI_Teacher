@@ -7,12 +7,11 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Union
 
+import jwt
 from fastapi import BackgroundTasks, HTTPException, Response
-from jose import jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.app.common.models.tag import Tag
 from src.app.common.utils.consts import GradeNumber, UserRole
 from src.app.common.utils.redis import (
     add_to_blacklist,
@@ -201,23 +200,33 @@ class UserService:
             raise HTTPException(status_code=401, detail="Refresh Token이 제공되지 않았습니다.")
 
         try:
+            # JWT 검증
+            print(f"Received Refresh Token: {refresh_token}")
             payload = verify_access_token(refresh_token)
+            print(f"Decoded Payload: {payload}")
+
             user_id = payload.get("sub")
             role = payload.get("role")
             if not user_id or not role:
                 raise HTTPException(status_code=401, detail="Refresh Token 정보가 유효하지 않습니다.")
 
+            # Redis에서 Refresh Token 확인
             redis_key = get_redis_key_refresh_token(user_id)
+            print(f"Redis Key: {redis_key}")
             stored_refresh_token = await get_from_redis(redis_key)
+            print(f"Stored Refresh Token: {stored_refresh_token}")
+
             if not stored_refresh_token:
                 raise HTTPException(status_code=401, detail="Refresh Token이 만료되었거나 존재하지 않습니다.")
             if stored_refresh_token != refresh_token:
                 raise HTTPException(status_code=401, detail="Refresh Token이 일치하지 않습니다.")
 
+            # Access Token 재발급
             jti = str(uuid.uuid4())
             new_access_token = create_access_token({"sub": user_id, "role": role, "jti": jti}, expires_delta=timedelta(minutes=15))
 
-            expiry = 15 * 60
+            # 새로운 JTI 저장
+            expiry = 15 * 60  # 15분
             jti_key = get_redis_key_jti(jti)
             await save_to_redis(jti_key, "used", expiry)
 
@@ -226,13 +235,14 @@ class UserService:
                 "token_type": "Bearer",
                 "expires_in": expiry,
             }
-
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Refresh Token이 만료되었습니다.")
-        except jwt.JWTError:
+        except jwt.InvalidTokenError as e:
+            print(f"Invalid Token Error: {e}")
             raise HTTPException(status_code=401, detail="유효하지 않은 Refresh Token입니다.")
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Access Token 갱신 중 서버 오류가 발생했습니다: {str(e)}")
+            print(f"Unhandled Exception: {e}")
+            raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
     async def logout_user(self, access_token: str, response: Response):
         try:
