@@ -52,22 +52,6 @@ def get_redis_key_refresh_token(user_id: int) -> str:
     return f"refresh_token:{user_id}"
 
 
-# 블랙리스트 관리 함수
-async def add_to_blacklist(token: str, expiry: int):
-    try:
-        jti = verify_access_token(token).get("jti")
-        if jti:
-            redis_key = get_redis_key_jti(jti)
-            await save_to_redis(redis_key, "used", expiry)
-    except Exception as e:
-        logger.error(f"블랙리스트 추가 오류 (Token: {token}): {e}")
-        raise HTTPException(status_code=500, detail="블랙리스트 추가 중 오류가 발생했습니다.")
-
-
-async def is_blacklisted(jti: str) -> bool:
-    return await get_from_redis(f"jti:{jti}") is not None
-
-
 async def mark_jti_used(jti: str, expiry: int):
     try:
         await save_to_redis(f"jti:{jti}", "used", expiry)

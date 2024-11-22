@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.utils.consts import GradeNumber, UserRole
 from src.app.common.utils.redis import (
-    add_to_blacklist,
     delete_from_redis,
     get_from_redis,
     get_redis_key_jti,
@@ -103,7 +102,6 @@ class UserService:
         logger.info(f"Registering user with payload: {payload}")
 
         try:
-            # 비밀번호 검증
             if payload.password != payload.password_confirm:
                 raise HTTPException(status_code=400, detail="비밀번호 확인이 일치하지 않습니다.")
             if not validate_password_complexity(payload.password):
@@ -218,7 +216,6 @@ class UserService:
             if stored_refresh_token.strip() != refresh_token.strip():
                 raise HTTPException(status_code=401, detail="Refresh Token이 일치하지 않습니다.")
 
-            # 새로운 Access Token 생성
             role = str(user.role) if not isinstance(user.role, str) else user.role
             jti = str(uuid.uuid4())
             access_token = create_access_token(
@@ -243,6 +240,35 @@ class UserService:
             raise HTTPException(status_code=401, detail="유효하지 않은 Refresh Token입니다.")
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+    async def logout_user(self, access_token: str, response: Response):
+        try:
+            payload = verify_access_token(access_token)
+            jti = payload.get("jti")
+            expiry = payload.get("exp") - int(datetime.now().timestamp())
+
+            user_id = payload.get("sub")
+            if user_id:
+                await delete_from_redis(get_redis_key_refresh_token(user_id))
+
+            response.delete_cookie(key="refresh_token")
+            return {"message": "로그아웃이 완료되었습니다."}
+        except jwt.ExpiredSignatureError:
+
+            user_id = None
+            try:
+                payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
+                user_id = payload.get("sub")
+            except Exception:
+                pass
+            if user_id:
+                await delete_from_redis(get_redis_key_refresh_token(user_id))
+                response.delete_cookie(key="refresh_token")
+            raise HTTPException(status_code=401, detail="Access Token이 만료되었습니다.")
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=401, detail="유효하지 않은 Access Token입니다.")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"로그아웃 중 서버 오류가 발생했습니다: {str(e)}")
 
     async def find_email_by_phone(self, phone: str, session: AsyncSession) -> dict:
         if not phone:

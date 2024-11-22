@@ -4,7 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Re
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.app.common.utils.dependency import CurrentUser, get_current_user, get_session
+from src.app.common.utils.dependency import get_current_user, get_session
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.user.schema.requestDto import (
     EmailRequest,
@@ -67,12 +67,14 @@ async def refresh_access_token(refresh_token: str, session: AsyncSession = Depen
 
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout_user(response: Response, current_user: CurrentUser = Depends(get_current_user)):
+async def logout_user(
+    response: Response,
+    current_user: dict = Depends(get_current_user)
+):
     return await user_service.logout_user(
         access_token=current_user["access_token"],
         response=response,
     )
-
 
 @router.post("/find-email", response_model=EmailResponse)
 async def find_email_by_phone(payload: PhoneRequest, session: AsyncSession = Depends(get_session)):
@@ -88,7 +90,7 @@ async def reset_password(payload: EmailRequest, session: AsyncSession = Depends(
 async def verify_password(
     payload: UpdatePasswordRequest,
     session: AsyncSession = Depends(get_session),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
 ):
     return await user_service.update_verify_password(session=session, token=current_user["access_token"], password=payload.password)
 
@@ -98,6 +100,6 @@ async def verify_password(
 async def update_user_info(
     payload: UpdateUserInfoRequest,
     session: AsyncSession = Depends(get_session),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
 ):
     return await user_service.update_user_info(session=session, token=current_user["access_token"], update_data=payload.dict())
