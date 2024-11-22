@@ -1,17 +1,17 @@
 import os
+
 import pytest
 import pytest_asyncio
 from dotenv import load_dotenv
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.future import select
-from src.config.database import Base
-from src.app.common.utils.consts import SocialProvider, UserRole
 
-from src.app.v1.user.entity.user import User
-from src.app.v1.chat.entity.room import Room
-from src.app.v1.chat.entity.message import Message
+from src.app.common.utils.consts import MessageType, SocialProvider, UserRole
 from src.app.v1.chat.entity.chat_participant import ChatParticipant
-from src.app.common.utils.consts import MessageType
+from src.app.v1.chat.entity.message import Message
+from src.app.v1.chat.entity.room import Room
+from src.app.v1.user.entity.user import User
+from src.config.database import Base
 
 load_dotenv()
 
