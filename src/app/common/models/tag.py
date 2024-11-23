@@ -11,4 +11,5 @@ class Tag(Base):
     nickname: Mapped[str] = mapped_column(String(12), unique=True, nullable=False)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
 
-    user = relationship("User", back_populates="tag")
+    # one-to-one 관계
+    user = relationship("User", back_populates="tag", uselist=False)

@@ -26,6 +26,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    student = relationship("Student", back_populates="user", uselist=False)
-    teacher = relationship("Teacher", back_populates="user", uselist=False)
-    tag = relationship("Tag", back_populates="user", uselist=False)
+    # one-to-one 관계
+    student = relationship("Student", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    teacher = relationship("Teacher", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    tag = relationship("Tag", back_populates="user", uselist=False, cascade="all, delete-orphan")

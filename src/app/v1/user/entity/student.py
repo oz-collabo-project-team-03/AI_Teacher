@@ -15,4 +15,5 @@ class Student(Base):
     description: Mapped[str] = mapped_column(String(25), nullable=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
 
-    user = relationship("User", back_populates="student")
+    # one-to-one 관계
+    user = relationship("User", back_populates="student", uselist=False)

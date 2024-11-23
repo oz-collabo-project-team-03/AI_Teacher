@@ -3,7 +3,7 @@ from enum import Enum
 from pydantic import BaseModel
 
 
-class UserRole(Enum):
+class UserRole(str, Enum):
     STUDENT = "student"
     TEACHER = "teacher"
 
@@ -16,7 +16,7 @@ user = User(role=UserRole.STUDENT)
 user = User(role=UserRole.TEACHER)
 
 
-class SocialProvider(Enum):
+class SocialProvider(str, Enum):
     GOOGLE = "google"
     NAVER = "naver"
     KAKAO = "kakao"
