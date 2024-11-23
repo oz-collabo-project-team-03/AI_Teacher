@@ -1,5 +1,5 @@
 from sqlalchemy import BigInteger, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.config.database import Base
 
@@ -10,3 +10,5 @@ class Tag(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     nickname: Mapped[str] = mapped_column(String(12), unique=True, nullable=False)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
+
+    user = relationship("User", back_populates="tag")

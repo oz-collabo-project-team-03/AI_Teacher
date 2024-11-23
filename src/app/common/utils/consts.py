@@ -9,7 +9,7 @@ class UserRole(Enum):
 
 
 class User(BaseModel):
-    role: UserRole
+    role: UserRole = UserRole.STUDENT
 
 
 user = User(role=UserRole.STUDENT)
@@ -27,12 +27,6 @@ class Visibility(Enum):
     PRIVATE = "private"
     TEACHER = "teacher"
     STUDENT = "student"
-
-
-class GradeNumber(Enum):
-    FIRST_GRADE = "1"
-    SECOND_GRADE = "2"
-    THIRD_GRADE = "3"
 
 
 class MessageType(Enum):

@@ -1,5 +1,5 @@
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from src.config.database import Base
@@ -14,3 +14,5 @@ class Recomment(Base):
     created_at: Mapped[DateTime] = mapped_column(DateTime, nullable=False, server_default=func.now())
     author_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
     post_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("posts.id"), nullable=False)
+
+    user = relationship("User", back_populates="recomments")

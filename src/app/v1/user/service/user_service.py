@@ -6,14 +6,13 @@ import string
 import uuid
 from datetime import datetime, timedelta
 from typing import Union
-from urllib.parse import unquote
 
 import jwt
 from fastapi import BackgroundTasks, HTTPException, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.app.common.utils.consts import GradeNumber, UserRole
+from src.app.common.utils.consts import UserRole
 from src.app.common.utils.redis import (
     delete_from_redis,
     get_from_redis,
@@ -390,7 +389,7 @@ class UserService:
             elif field in {"phone", "school"}:
                 update_dict[field] = value
             elif field == "grade":
-                update_dict["grade"] = GradeNumber(value)
+                update_dict["grade"] = int(value)
         return update_dict
 
     async def _validate_email(self, session, email):
