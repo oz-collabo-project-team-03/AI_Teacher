@@ -100,6 +100,7 @@ class UserRepository:
 
                 teacher = Teacher(user_id=user.id)
                 session.add(teacher)
+                await session.flush()
 
                 organization = Organization(
                     name=teacher_data["organization_name"],

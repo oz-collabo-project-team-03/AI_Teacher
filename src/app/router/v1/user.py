@@ -1,8 +1,9 @@
-from typing import Annotated, Union
+from typing import Union
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.app.common.utils.consts import UserRole
 from src.app.common.utils.dependency import get_current_user, get_session
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.user.schema.requestDto import (

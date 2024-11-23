@@ -10,4 +10,6 @@ class Teacher(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
 
-    user = relationship("User", back_populates="teacher")
+    # ono-to-one 관계
+    user = relationship("User", back_populates="teacher", uselist=False)
+    organization = relationship("Organization", back_populates="teacher", uselist=False, cascade="all, delete-orphan")

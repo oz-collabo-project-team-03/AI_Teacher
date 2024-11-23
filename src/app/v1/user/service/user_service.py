@@ -36,6 +36,7 @@ from src.app.common.utils.verify_password import (
 from src.app.v1.user.entity.user import User
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.user.schema.requestDto import (
+    BaseRegisterRequest,
     StudentRegisterRequest,
     TeacherRegisterRequest,
 )
@@ -99,21 +100,21 @@ class UserService:
 
     async def register_user(self, payload: Union[StudentRegisterRequest, TeacherRegisterRequest], session: AsyncSession):
         logger.info(f"Registering user with payload: {payload}")
-
         try:
             if payload.password != payload.password_confirm:
                 raise HTTPException(status_code=400, detail="비밀번호 확인이 일치하지 않습니다.")
             if not validate_password_complexity(payload.password):
-                raise HTTPException(status_code=400, detail="비밀번호는 10~20자의 영문, 숫자, 특수문자가 포함되어야 합니다.")
+                raise HTTPException(status_code=400, detail="비밀번호는 10~20자의 영문(대소문자), 숫자가 포함되어야 합니다.")
 
             hashed_password = hash_password(payload.password)
 
-            # 유저 데이터 준비 및 생성
-            if isinstance(payload, StudentRegisterRequest):
-                user_data = self._prepare_student_data(payload, hashed_password)
+            if payload.role == UserRole.STUDENT:
+                student_payload = StudentRegisterRequest(**payload.dict())
+                user_data = self._prepare_student_data(student_payload, hashed_password)
                 await self.user_repo.create_student(session, user_data, user_data["student_data"])
-            elif isinstance(payload, TeacherRegisterRequest):
-                user_data = self._prepare_teacher_data(payload, hashed_password)
+            elif payload.role == UserRole.TEACHER:
+                teacher_payload = TeacherRegisterRequest(**payload.dict())
+                user_data = self._prepare_teacher_data(teacher_payload, hashed_password)
                 await self.user_repo.create_teacher(session, user_data, user_data["teacher_data"])
             else:
                 raise HTTPException(status_code=400, detail="유효하지 않은 역할입니다.")
