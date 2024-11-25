@@ -41,4 +41,4 @@ SessionLocal = async_sessionmaker(
     autoflush=False,
 )
 
-Base = declarative_base()  # 모델 정의 시 상속 받아서 사용
+Base = declarative_base()
