@@ -1,14 +1,10 @@
 import logging
-import os
 
-import redis.asyncio as redis
 from fastapi import HTTPException
 
-from src.app.common.utils.security import verify_access_token
+from src.config.database.redis import get_redis_cache
 
-# Redis 클라이언트 초기화
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+redis_client = get_redis_cache()
 
 # TTL 설정
 REFRESH_TOKEN_TTL = 7 * 24 * 3600  # 7일

@@ -16,3 +16,7 @@ redis_cache: Optional[Redis] = Redis(
     db=REDIS_DB_CACHE,
     decode_responses=True,
 )
+
+
+def get_redis_cache() -> Redis:
+    return redis_cache

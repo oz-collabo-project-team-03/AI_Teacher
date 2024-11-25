@@ -2,10 +2,10 @@ import asyncio
 import os
 from logging.config import fileConfig
 
+import sqlalchemy
 from alembic import context
 from dotenv import load_dotenv
 from sqlalchemy import pool
-import sqlalchemy
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 # 모델 import
