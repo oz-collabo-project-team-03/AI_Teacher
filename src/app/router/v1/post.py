@@ -24,7 +24,7 @@ async def get_my_posts(
     return await post_service.get_my_posts(page=page, user_id=user_info.get("user_id"))  # type: ignore
 
 
-@router.post("/write")
+@router.post("/write", status_code=status.HTTP_201_CREATED)
 async def post_write(
     content: str = Form(...),
     image1: Optional[UploadFile] = File(None),
@@ -45,9 +45,7 @@ async def post_write(
         is_with_teacher=is_with_teacher,
     )
 
-    await post_service.create_post(user_id=user_info.get("user_id"), post=post)  # type: ignore
-
-    return Response(status_code=status.HTTP_201_CREATED)
+    return await post_service.create_post(user_id=user_info.get("user_id"), post=post)  # type: ignore
 
 
 @router.get("/{post_id}")
