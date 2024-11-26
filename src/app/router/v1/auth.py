@@ -1,6 +1,6 @@
 from typing import Union
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.utils.dependency import get_current_user, get_session
@@ -9,13 +9,17 @@ from src.app.v1.user.schema.requestDto import (
     EmailRequest,
     EmailVerifyRequest,
     LoginRequest,
+    PhoneRequest,
     StudentRegisterRequest,
     TeacherRegisterRequest,
+    UpdatePasswordRequest,
 )
 from src.app.v1.user.schema.responseDto import (
     AccessTokenResponse,
+    EmailResponse,
     MessageResponse,
     TokenResponse,
+    UserInfoResponse,
 )
 from src.app.v1.user.service.user_service import UserService
 
@@ -56,7 +60,11 @@ async def login_user(payload: LoginRequest, response: Response, session: AsyncSe
 
 
 @router.post("/token/refresh", response_model=AccessTokenResponse)
-async def refresh_access_token(refresh_token: str, session: AsyncSession = Depends(get_session)):
+async def refresh_access_token(
+    authorization: str = Header(...),  # 헤더에서 토큰 추출
+    session: AsyncSession = Depends(get_session),
+):
+    refresh_token = authorization.replace("Bearer ", "").strip()
     return await user_service.refresh_access_token(refresh_token=refresh_token, session=session)
 
 
@@ -68,23 +76,17 @@ async def logout_user(response: Response, current_user: dict = Depends(get_curre
     )
 
 
-# # @router.post("/find-email", response_model=EmailResponse)
-# # async def find_email_by_phone(payload: PhoneRequest, session: AsyncSession = Depends(get_session)):
-# #     return await user_service.find_email_by_phone(phone=payload.phone, session=session)
-# #
-# #
-# # @router.post("/reset-password", response_model=MessageResponse)
-# # async def reset_password(payload: EmailRequest, session: AsyncSession = Depends(get_session)):
-# #     return await user_service.reset_password_service(email=payload.email, session=session)
-# #
-# #
-# # @router.post("/verify/password", response_model=UserInfoResponse)
-# # async def verify_password(
-# #     payload: UpdatePasswordRequest,
-# #     session: AsyncSession = Depends(get_session),
-# #     current_user: dict = Depends(get_current_user),
-# # ):
-# #     return await user_service.update_verify_password(session=session, token=current_user["access_token"], password=payload.password)
+@router.post("/find/email", response_model=EmailResponse)
+async def find_email_by_phone(payload: PhoneRequest, session: AsyncSession = Depends(get_session)):
+    return await user_service.find_email_by_phone(phone=payload.phone, session=session)
+
+
+# @router.post("/verify/password", response_model=UserInfoResponse)
+# async def verify_password(
+#         payload: UpdatePasswordRequest,
+#         session: AsyncSession = Depends(get_session),
+#  ):
+#      return await user_service.reset_password_service(email=payload.email, session=session)
 # #
 # #
 # # # 유저 정보 업데이트

@@ -7,6 +7,7 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str
     expires_in: int
+    role: str
     message: str
 
 

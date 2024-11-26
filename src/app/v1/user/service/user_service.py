@@ -223,6 +223,7 @@ class UserService:
             "refresh_token": refresh_token,
             "token_type": "Bearer",
             "expires_in": 900,
+            "role": role,
             "message": "로그인에 성공하였습니다.",
         }
 
