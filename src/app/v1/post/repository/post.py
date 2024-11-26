@@ -53,7 +53,7 @@ class PostRepository:
             await session.commit()
             await session.refresh(new_post)
 
-            return new_post
+            return {"post_id": new_post.external_id}
 
     @staticmethod
     async def get_post(post_id: str):
@@ -107,6 +107,7 @@ class PostRepository:
                 "interest": student.interest,
                 "like_count": post.like_count,
                 "comment_count": post.comment_count,
+                "post_id": post.external_id,
                 "image1": image_paths[0],
                 "image2": image_paths[1],
                 "image3": image_paths[2],
@@ -334,6 +335,7 @@ class PostRepository:
                     "interest": student.interest,
                     "like_count": post.like_count,
                     "comment_count": post.comment_count,
+                    "post_id": post.external_id,
                     "image1": image_paths[0],
                     "image2": image_paths[1],
                     "image3": image_paths[2],
@@ -425,6 +427,7 @@ class PostRepository:
                     "interest": student.interest,
                     "like_count": post.like_count,
                     "comment_count": post.comment_count,
+                    "post_id": post.external_id,
                     "image1": image_paths[0],
                     "image2": image_paths[1],
                     "image3": image_paths[2],
