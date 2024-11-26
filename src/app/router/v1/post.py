@@ -1,11 +1,15 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status, Query
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from fastapi.responses import Response
 
 from src.app.common.utils.dependency import get_current_user
 from src.app.common.utils.image import NCPStorageService  # type: ignore
-from src.app.v1.post.schema.post import PostCreateRequest, PostUpdateRequest, LikeRequest
+from src.app.v1.post.schema.post import (
+    LikeRequest,
+    PostCreateRequest,
+    PostUpdateRequest,
+)
 from src.app.v1.post.service.post import PostService
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
@@ -83,7 +87,7 @@ async def like_post(
     post_service: PostService = Depends(PostService),
     user_info: dict = Depends(get_current_user),
 ):
-    await post_service.like_post(user_id=user_info.get("user_id"), post_id=post_id, like=like_request.like)
+    await post_service.like_post(user_id=user_info.get("user_id"), post_id=post_id, like=like_request.like)  # type: ignore
 
     return Response(status_code=status.HTTP_200_OK)
 

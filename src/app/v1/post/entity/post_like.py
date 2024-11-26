@@ -1,8 +1,8 @@
-from sqlalchemy import BigInteger, ForeignKey, DateTime
+from sqlalchemy import BigInteger, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
 
 from src.config.database import Base
-from sqlalchemy.sql import func
 
 
 class PostLike(Base):
