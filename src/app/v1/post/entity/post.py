@@ -20,7 +20,7 @@ class Post(Base):
     __tablename__ = "posts"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
-    external_id: Mapped[str] = mapped_column(String(16), nullable=False)
+    external_id: Mapped[str] = mapped_column(String(26), nullable=False)
     author_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     visibility: Mapped[str] = mapped_column(Enum(Visibility), default=Visibility.PUBLIC, nullable=False)
