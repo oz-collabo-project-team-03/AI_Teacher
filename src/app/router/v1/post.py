@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status, Query
 from fastapi.responses import Response
 
 from src.app.common.utils.dependency import get_current_user
@@ -86,3 +86,11 @@ async def like_post(
     await post_service.like_post(user_id=user_info.get("user_id"), post_id=post_id, like=like_request.like)
 
     return Response(status_code=status.HTTP_200_OK)
+
+
+@router.get("")
+async def get_posts(
+    page: int = Query(default=1, gt=0),
+    post_service: PostService = Depends(PostService),
+):
+    return await post_service.get_posts(page=page)

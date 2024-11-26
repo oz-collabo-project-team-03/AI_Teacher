@@ -1,11 +1,14 @@
 # type: ignore
+import os
 
+from dotenv import load_dotenv
 from fastapi import HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, func
 from sqlalchemy.orm import joinedload
 from starlette import status
 from ulid import ulid  # type: ignore
 
+from src.app.common.models.tag import Tag
 from src.app.v1.post.entity.post_like import PostLike
 from src.app.common.models.image import Image
 from src.app.common.utils.consts import UserRole
@@ -266,8 +269,94 @@ class PostRepository:
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     @staticmethod
-    async def get_user_posts(user_id: str):
-        raise NotImplementedError
+    async def get_posts(page: int):
+        PAGE_SIZE = 10
+
+        async with SessionLocal() as session:
+            # 전체 게시글 수 조회
+            total_count_query = select(func.count(Post.id))
+            total_count_result = await session.execute(total_count_query)
+            total_count = total_count_result.scalar()
+
+            # 메인 쿼리 - 모든 필요한 관계를 한 번에 로드
+            query = (
+                select(Post, User, Student, Tag)
+                .join(User, Post.author_id == User.id)
+                .join(Student, User.id == Student.user_id)
+                .join(Tag, User.id == Tag.user_id)
+                .order_by(Post.created_at.desc())
+                .offset((page - 1) * PAGE_SIZE)
+                .limit(PAGE_SIZE)
+            )
+
+            result = await session.execute(query)
+            rows = result.all()
+
+            posts = []
+            for row in rows:
+                post, user, student, tag = row
+
+                # 이미지 조회
+                images_query = (
+                    select(Image.image_path)
+                    .join(PostImage, Image.id == PostImage.image_id)
+                    .where(PostImage.post_id == post.id)
+                    .order_by(PostImage.id)
+                    .limit(3)
+                )
+                images_result = await session.execute(images_query)
+                image_paths = [path[0] for path in images_result]
+
+                # 3개까지 채우기
+                while len(image_paths) < 3:
+                    image_paths.append(None)
+
+                # 선생님 정보 조회 (is_with_teacher가 True인 경우)
+                teacher_info = None
+                if post.is_with_teacher:
+                    teacher_query = (
+                        select(User.profile_image, Tag.nickname)
+                        .join(Teacher, User.id == Teacher.user_id)
+                        .join(Tag, User.id == Tag.user_id)
+                        .where(User.role == UserRole.TEACHER)
+                        .limit(1)
+                    )
+                    teacher_result = await session.execute(teacher_query)
+                    teacher_row = teacher_result.first()
+                    if teacher_row:
+                        profile_image, nickname = teacher_row
+                        teacher_info = {"nickname": nickname, "profile_image": profile_image}
+
+                post_data = {
+                    "nickname": tag.nickname,
+                    "profile_image": user.profile_image,
+                    "career_aspiration": student.career_aspiration,
+                    "interest": student.interest,
+                    "like_count": post.like_count,
+                    "comment_count": post.comment_count,
+                    "image1": image_paths[0],
+                    "image2": image_paths[1],
+                    "image3": image_paths[2],
+                    "content": post.content,
+                    "created_at": post.created_at.isoformat(),
+                }
+
+                if teacher_info:
+                    post_data["teacher"] = teacher_info
+
+                posts.append(post_data)
+
+            load_dotenv()
+
+            host = os.getenv("HOST", "127.0.0.1:8000")
+
+            base_url = f"http://{host}/api/v1/posts"
+
+            # 페이지네이션 정보
+            next_page = f"{base_url}?page={page + 1}"
+            previous_page = f"{base_url}?page={page - 1}" if page > 1 else None
+
+            return {"next": next_page, "previous": previous_page, "posts": posts}
 
     @staticmethod
     async def get_all_posts():
