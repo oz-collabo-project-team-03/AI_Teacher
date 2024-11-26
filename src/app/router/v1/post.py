@@ -1,6 +1,7 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi.responses import Response
 
 from src.app.common.utils.dependency import get_current_user
 from src.app.common.utils.image import NCPStorageService  # type: ignore
@@ -31,4 +32,11 @@ async def post_write(
         is_with_teacher=is_with_teacher,
     )
 
-    return await post_service.create_post(user_id=user_info.get("user_id"), post=post)  # type: ignore
+    await post_service.create_post(user_id=user_info.get("user_id"), post=post)  # type: ignore
+
+    return Response(status_code=status.HTTP_201_CREATED)
+
+
+@router.get("/{post_id}")
+async def post_get(post_id: str, post_service: PostService = Depends(PostService)):
+    return await post_service.get_post(post_id)
