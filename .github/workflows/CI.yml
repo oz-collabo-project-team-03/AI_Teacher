@@ -92,7 +92,7 @@ jobs:
 
     # mypy 검사: 코드 타입 검사를 수행합니다.
     - name: Run mypy
-      run: poetry run mypy . --no-cache
+      run: poetry run mypy . --no-incremental
 
 #    # pylint 검사: 코드의 코드 품질을 점검합니다.
 #    - name: Run pylint
