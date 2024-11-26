@@ -19,5 +19,5 @@ class Message(Base):
     read_checked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
-    participants = relationship("Participant", back_populates="messages")
-    user = relationship("User", back_populates="messages")
+    participants = relationship("Participant")
+    user = relationship("User")
