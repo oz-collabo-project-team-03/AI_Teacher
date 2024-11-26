@@ -1,6 +1,5 @@
 import logging
 
-import ulid
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,9 +40,6 @@ class UserRepository:
     async def get_user_by_external_id(self, session: AsyncSession, external_id: str) -> User | None:
         return await self._get_user(session, external_id=external_id)
 
-    async def get_user_by_id(self, session: AsyncSession, user_id: int) -> User | None:
-        return await self._get_user(session, id=user_id)
-
     async def get_user_by_email(self, session: AsyncSession, email: str) -> User | None:
         return await self._get_user(session, email=email)
 
@@ -54,14 +50,12 @@ class UserRepository:
     async def create_student(self, session: AsyncSession, user_data: dict, student_data: dict):
         async with session.begin():
             try:
-                external_id = str(ulid.new())
                 user = User(
                     email=user_data["email"],
                     phone=user_data["phone"],
                     password=user_data["password"],
                     role=UserRole.STUDENT,
                     is_privacy_accepted=user_data["is_privacy_accepted"],
-                    external_id=external_id,
                 )
                 session.add(user)
                 await session.flush()
@@ -90,14 +84,12 @@ class UserRepository:
     async def create_teacher(self, session: AsyncSession, user_data: dict, teacher_data: dict):
         async with session.begin():
             try:
-                external_id = str(ulid.new())
                 user = User(
                     email=user_data["email"],
                     phone=user_data["phone"],
                     password=user_data["password"],
                     role=UserRole.TEACHER,
                     is_privacy_accepted=user_data["is_privacy_accepted"],
-                    external_id=external_id,
                 )
                 session.add(user)
                 await session.flush()

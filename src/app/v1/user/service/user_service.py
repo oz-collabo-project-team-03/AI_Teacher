@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 from typing import Union
 
 import jwt
-import ulid
 from email_validator import EmailNotValidError, validate_email
 from fastapi import BackgroundTasks, HTTPException, Response
 from sqlalchemy import select
@@ -29,7 +28,6 @@ from src.app.common.utils.security import (
     create_refresh_token,
     verify_access_token,
 )
-from src.app.common.utils.send_email import send_email_async
 from src.app.common.utils.verify_password import (
     hash_password,
     validate_password_complexity,
@@ -137,15 +135,14 @@ class UserService:
                 raise HTTPException(status_code=400, detail="비밀번호는 10~20자의 영문(대소문자), 숫자가 포함되어야 합니다.")
 
             hashed_password = hash_password(payload.password)
-            external_id = str(ulid.new())
 
             if payload.role == UserRole.STUDENT:
                 student_payload = StudentRegisterRequest(**payload.dict())
-                user_data = self._prepare_student_data(student_payload, hashed_password, external_id)
+                user_data = self._prepare_student_data(student_payload, hashed_password)
                 await self.user_repo.create_student(session, user_data, user_data["student_data"])
             elif payload.role == UserRole.TEACHER:
                 teacher_payload = TeacherRegisterRequest(**payload.dict())
-                user_data = self._prepare_teacher_data(teacher_payload, hashed_password, external_id)
+                user_data = self._prepare_teacher_data(teacher_payload, hashed_password)
                 await self.user_repo.create_teacher(session, user_data, user_data["teacher_data"])
             else:
                 raise HTTPException(status_code=400, detail="유효하지 않은 역할입니다.")
@@ -157,14 +154,13 @@ class UserService:
             logger.error(f"Error during user registration: {e}")
             raise HTTPException(status_code=500, detail="회원가입 중 오류가 발생했습니다.")
 
-    def _prepare_student_data(self, payload: StudentRegisterRequest, hashed_password: str, external_id: str) -> dict:
+    def _prepare_student_data(self, payload: StudentRegisterRequest, hashed_password: str) -> dict:
         return {
             "email": payload.email,
             "password": hashed_password,
             "phone": payload.phone,
             "is_privacy_accepted": payload.is_privacy_accepted,
             "role": UserRole.STUDENT,
-            "external_id": external_id,  #
             "student_data": {
                 "school": payload.school,
                 "grade": payload.grade,
@@ -174,14 +170,13 @@ class UserService:
             "nickname": payload.nickname,
         }
 
-    def _prepare_teacher_data(self, payload: TeacherRegisterRequest, hashed_password: str, external_id: str) -> dict:
+    def _prepare_teacher_data(self, payload: TeacherRegisterRequest, hashed_password: str) -> dict:
         return {
             "email": payload.email,
             "password": hashed_password,
             "phone": payload.phone,
             "is_privacy_accepted": payload.is_privacy_accepted,
             "role": UserRole.TEACHER,
-            "external_id": external_id,
             "teacher_data": {
                 "organization_name": payload.organization_name,
                 "organization_type": payload.organization_type,
@@ -232,15 +227,15 @@ class UserService:
 
         try:
             payload = verify_access_token(refresh_token)
-            user_id = int(payload.get("sub", 0))
-            if not user_id:
+            external_id = payload.get("sub", 0)
+            if not external_id:
                 raise HTTPException(status_code=401, detail="Refresh Token 정보가 유효하지 않습니다.")
 
-            user = await self.user_repo.get_user_by_id(session, user_id)
+            user = await self.user_repo.get_user_by_external_id(session, external_id)
             if not user:
                 raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
-            redis_key = get_redis_key_refresh_token(user_id)
+            redis_key = get_redis_key_refresh_token(external_id)
             stored_refresh_token = await get_from_redis(redis_key)
             if not stored_refresh_token:
                 raise HTTPException(status_code=401, detail="Refresh Token이 만료되었거나 존재하지 않습니다.")
@@ -287,13 +282,13 @@ class UserService:
                 raise HTTPException(status_code=401, detail="Access Token이 만료되었습니다.")
 
             jti = payload.get("jti")
-            user_id = payload.get("sub")
+            external_id = payload.get("sub")
 
             # Redis에서 Refresh Token 삭제
-            if user_id:
-                redis_key = get_redis_key_refresh_token(user_id)
+            if external_id:
+                redis_key = get_redis_key_refresh_token(external_id)
                 await delete_from_redis(redis_key)
-                logger.info(f"Redis에서 사용자 {user_id}의 키 {redis_key} 삭제 완료.")
+                logger.info(f"Redis에서 사용자 {external_id}의 키 {redis_key} 삭제 완료.")
 
             # 쿠키 삭제
             response.delete_cookie(key="refresh_token")
