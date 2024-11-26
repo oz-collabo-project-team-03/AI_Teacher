@@ -101,6 +101,15 @@ async def like_post(
     return Response(status_code=status.HTTP_200_OK)
 
 
+@router.get("/users/{user_id}")
+async def get_user_posts(
+    user_id: str,
+    page: int = Query(default=1, gt=0),
+    post_service: PostService = Depends(PostService),
+):
+    return await post_service.get_user_posts(user_id=user_id, page=page)
+
+
 @router.get("")
 async def get_posts(
     page: int = Query(default=1, gt=0),

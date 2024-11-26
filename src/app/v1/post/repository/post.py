@@ -359,7 +359,7 @@ class PostRepository:
             return {"next": next_page, "previous": previous_page, "posts": posts}
 
     @staticmethod
-    async def get_my_posts(user_id: str, page: int):
+    async def get_user_posts(user_id: str, page: int):
         PAGE_SIZE = 10
 
         async with SessionLocal() as session:
