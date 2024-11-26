@@ -21,7 +21,7 @@ async def get_my_posts(
     post_service: PostService = Depends(PostService),
     user_info: dict = Depends(get_current_user),
 ):
-    return await post_service.get_my_posts(page=page, user_id=user_info.get("user_id"))
+    return await post_service.get_my_posts(page=page, user_id=user_info.get("user_id"))  # type: ignore
 
 
 @router.post("/write")
