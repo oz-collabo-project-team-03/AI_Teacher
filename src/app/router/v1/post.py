@@ -15,6 +15,15 @@ from src.app.v1.post.service.post import PostService
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
+@router.get("/me")
+async def get_my_posts(
+    page: int = Query(default=1, gt=0),
+    post_service: PostService = Depends(PostService),
+    user_info: dict = Depends(get_current_user),
+):
+    return await post_service.get_my_posts(page=page, user_id=user_info.get("user_id"))
+
+
 @router.post("/write")
 async def post_write(
     content: str = Form(...),
