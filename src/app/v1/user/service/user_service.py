@@ -8,12 +8,14 @@ from datetime import datetime, timedelta
 from typing import Union
 
 import jwt
+import ulid
+from email_validator import EmailNotValidError, validate_email
 from fastapi import BackgroundTasks, HTTPException, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.utils.consts import UserRole
-from src.app.common.utils.redis import (
+from src.app.common.utils.redis_utils import (
     delete_from_redis,
     get_from_redis,
     get_redis_key_jti,
@@ -27,7 +29,7 @@ from src.app.common.utils.security import (
     create_refresh_token,
     verify_access_token,
 )
-from src.app.common.utils.send_email import send_email
+from src.app.common.utils.send_email import send_email_async
 from src.app.common.utils.verify_password import (
     hash_password,
     validate_password_complexity,
@@ -55,48 +57,76 @@ class UserService:
 
     @staticmethod
     def _validate_email_format(email: str) -> bool:
-        email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-        return bool(re.match(email_regex, email))
+        try:
+            validate_email(email)
+            return True
+        except EmailNotValidError as e:
+            logger.warning(f"유효하지 않은 이메일 형식: {email} - {e}")
+            return False
 
+    # 랜덤 6자리 숫자
     @staticmethod
     def _generate_verification_code(length: int = 6) -> str:
         return "".join(random.choices("0123456789", k=length))
 
-    async def send_verification_code(self, email: str, session: AsyncSession, background_tasks: BackgroundTasks) -> dict:
+    # 인증 코드 발송
+    async def send_verification_code(self, email: str, background_tasks: BackgroundTasks) -> dict:
 
         if not self._validate_email_format(email):
             raise HTTPException(status_code=400, detail="유효한 이메일 형식이 아닙니다.")
 
-        existing_user = await self.user_repo.get_user_by_email(session, email)
-        if existing_user:
-            raise HTTPException(status_code=400, detail="이미 등록된 이메일입니다.")
-
-        redis_key = EMAIL_VERIFICATION_KEY_TEMPLATE.format(email=email)
-        existing_code = await get_from_redis(redis_key)
-        if existing_code:
-            raise HTTPException(status_code=400, detail="이미 인증 코드가 발송되었습니다. 남은 인증 시간 이후에 시도해 주세요.")
-
+        # 인증 코드 생성
         verification_code = self._generate_verification_code()
-        await save_to_redis(redis_key, verification_code, EMAIL_VERIFICATION_EXPIRY)
+        redis_key = EMAIL_VERIFICATION_KEY_TEMPLATE.format(email=email)
 
+        logger.info(f"Redis 저장 시도: Key={redis_key}, Value={verification_code}, Expiry={EMAIL_VERIFICATION_EXPIRY}")
+
+        # Redis에 저장
+        try:
+            await save_to_redis(redis_key, verification_code, EMAIL_VERIFICATION_EXPIRY)
+            logger.info(f"Redis 저장 성공: Key={redis_key}")
+        except Exception as e:
+            logger.error(f"Redis 저장 실패: {e}")
+            raise HTTPException(status_code=500, detail="Redis 저장 중 문제가 발생했습니다.")
+
+        # 이메일 발송 (비동기로 처리)
         background_tasks.add_task(
-            send_email, recipient=email, subject="이메일 인증 코드", body=f"인증 코드: {verification_code}\n3분 안에 입력해 주세요."
+            send_email_async,
+            recipient_email=email,
+            subject="이메일 인증 코드",
+            body=f"인증 코드: {verification_code}\n3분 안에 입력해 주세요.",
         )
 
         return {"message": f"인증 코드가 {email}로 전송되었습니다. 3분 안에 입력해 주세요."}
 
     async def verify_email_code(self, email: str, code: str) -> dict:
         redis_key = EMAIL_VERIFICATION_KEY_TEMPLATE.format(email=email)
-        stored_code = await get_from_redis(redis_key)
+
+        # Redis에서 인증 코드 조회
+        try:
+            stored_code = await get_from_redis(redis_key)
+            logger.info(f"Redis 조회 성공: Key={redis_key}, Value={stored_code}")
+        except Exception as e:
+            logger.error(f"Redis 조회 오류: {e}")
+            raise HTTPException(status_code=500, detail="인증 코드를 확인하는 중 문제가 발생했습니다.")
 
         if not stored_code:
-            raise HTTPException(status_code=400, detail="인증 코드가 만료되었거나 잘못된 요청입니다.")
+            logger.warning(f"인증 코드 만료 또는 존재하지 않음: Key={redis_key}")
+            raise HTTPException(status_code=400, detail="인증 코드가 만료되었거나 존재하지 않습니다.")
+
         if stored_code != code:
+            logger.warning(f"인증 코드 불일치: 입력={code}, 저장={stored_code}")
             raise HTTPException(status_code=400, detail="인증 코드가 일치하지 않습니다.")
 
-        await delete_from_redis(redis_key)
+        # Redis에서 인증 코드 삭제
+        try:
+            await delete_from_redis(redis_key)
+            logger.info(f"Redis 삭제 성공: Key={redis_key}")
+        except Exception as e:
+            logger.error(f"Redis 삭제 오류: {e}")
+            raise HTTPException(status_code=500, detail="인증 코드 삭제 중 문제가 발생했습니다.")
 
-        return {"message": "이메일 인증에 성공하였습니다."}
+        return {"message": "이메일 인증이 완료되었습니다."}
 
     async def register_user(self, payload: Union[StudentRegisterRequest, TeacherRegisterRequest], session: AsyncSession):
         logger.info(f"Registering user with payload: {payload}")
@@ -107,14 +137,15 @@ class UserService:
                 raise HTTPException(status_code=400, detail="비밀번호는 10~20자의 영문(대소문자), 숫자가 포함되어야 합니다.")
 
             hashed_password = hash_password(payload.password)
+            external_id = str(ulid.new())
 
             if payload.role == UserRole.STUDENT:
                 student_payload = StudentRegisterRequest(**payload.dict())
-                user_data = self._prepare_student_data(student_payload, hashed_password)
+                user_data = self._prepare_student_data(student_payload, hashed_password, external_id)
                 await self.user_repo.create_student(session, user_data, user_data["student_data"])
             elif payload.role == UserRole.TEACHER:
                 teacher_payload = TeacherRegisterRequest(**payload.dict())
-                user_data = self._prepare_teacher_data(teacher_payload, hashed_password)
+                user_data = self._prepare_teacher_data(teacher_payload, hashed_password, external_id)
                 await self.user_repo.create_teacher(session, user_data, user_data["teacher_data"])
             else:
                 raise HTTPException(status_code=400, detail="유효하지 않은 역할입니다.")
@@ -126,13 +157,14 @@ class UserService:
             logger.error(f"Error during user registration: {e}")
             raise HTTPException(status_code=500, detail="회원가입 중 오류가 발생했습니다.")
 
-    def _prepare_student_data(self, payload: StudentRegisterRequest, hashed_password: str):
+    def _prepare_student_data(self, payload: StudentRegisterRequest, hashed_password: str, external_id: str) -> dict:
         return {
             "email": payload.email,
             "password": hashed_password,
             "phone": payload.phone,
             "is_privacy_accepted": payload.is_privacy_accepted,
             "role": UserRole.STUDENT,
+            "external_id": external_id,  #
             "student_data": {
                 "school": payload.school,
                 "grade": payload.grade,
@@ -142,13 +174,14 @@ class UserService:
             "nickname": payload.nickname,
         }
 
-    def _prepare_teacher_data(self, payload: TeacherRegisterRequest, hashed_password: str):
+    def _prepare_teacher_data(self, payload: TeacherRegisterRequest, hashed_password: str, external_id: str) -> dict:
         return {
             "email": payload.email,
             "password": hashed_password,
             "phone": payload.phone,
             "is_privacy_accepted": payload.is_privacy_accepted,
             "role": UserRole.TEACHER,
+            "external_id": external_id,
             "teacher_data": {
                 "organization_name": payload.organization_name,
                 "organization_type": payload.organization_type,

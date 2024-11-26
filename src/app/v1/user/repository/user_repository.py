@@ -1,5 +1,6 @@
 import logging
 
+import ulid
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +38,9 @@ class UserRepository:
             logger.error(f"Failed to fetch user: {e}")
             raise HTTPException(status_code=500, detail="데이터베이스 조회 중 오류가 발생했습니다.")
 
+    async def get_user_by_external_id(self, session: AsyncSession, external_id: str) -> User | None:
+        return await self._get_user(session, external_id=external_id)
+
     async def get_user_by_id(self, session: AsyncSession, user_id: int) -> User | None:
         return await self._get_user(session, id=user_id)
 
@@ -50,12 +54,14 @@ class UserRepository:
     async def create_student(self, session: AsyncSession, user_data: dict, student_data: dict):
         async with session.begin():
             try:
+                external_id = str(ulid.new())
                 user = User(
                     email=user_data["email"],
                     phone=user_data["phone"],
                     password=user_data["password"],
                     role=UserRole.STUDENT,
                     is_privacy_accepted=user_data["is_privacy_accepted"],
+                    external_id=external_id,
                 )
                 session.add(user)
                 await session.flush()
@@ -84,12 +90,14 @@ class UserRepository:
     async def create_teacher(self, session: AsyncSession, user_data: dict, teacher_data: dict):
         async with session.begin():
             try:
+                external_id = str(ulid.new())
                 user = User(
                     email=user_data["email"],
                     phone=user_data["phone"],
                     password=user_data["password"],
                     role=UserRole.TEACHER,
                     is_privacy_accepted=user_data["is_privacy_accepted"],
+                    external_id=external_id,
                 )
                 session.add(user)
                 await session.flush()
@@ -129,10 +137,10 @@ class UserRepository:
                 logger.error(f"Error updating password: {e}")
                 raise HTTPException(status_code=500, detail="비밀번호 업데이트 중 오류가 발생했습니다.")
 
-    async def update_user(self, session: AsyncSession, user_id: int, update_data: dict):
+    async def update_user(self, session: AsyncSession, external_id: str, update_data: dict):
         async with session.begin():
             try:
-                user = await self._get_user(session, id=user_id)
+                user = await self._get_user(session, id=external_id)
                 if not user:
                     raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
@@ -150,5 +158,5 @@ class UserRepository:
 
                 return user
             except SQLAlchemyError as e:
-                logger.error(f"Error updating user: {e}")
+                logger.error(f"Error updating user by external_id: {e}")
                 raise HTTPException(status_code=500, detail="사용자 정보 업데이트 중 오류가 발생했습니다.")

@@ -19,6 +19,9 @@ pyjwt = "2.9.0"
 email-validator = "2.2.0"
 argon2-cffi = "23.1.0"
 python-jose = "3.3.0"
+requests = "2.32.3"
+aiosmtplib = "3.0.2"
+ulid-py = "1.1.0"
 
 
 [tool.poetry.group.dev.dependencies]
