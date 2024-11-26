@@ -232,15 +232,15 @@ class UserService:
 
         try:
             payload = verify_access_token(refresh_token)
-            external_id = payload.get("sub", 0)
-            if not external_id:
+            user_id = int(payload.get("sub", 0))
+            if not user_id:
                 raise HTTPException(status_code=401, detail="Refresh Token 정보가 유효하지 않습니다.")
 
-            user = await self.user_repo.get_user_by_external_id(session, external_id)
+            user = await self.user_repo.get_user_by_id(session, user_id)
             if not user:
                 raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
-            redis_key = get_redis_key_refresh_token(external_id)
+            redis_key = get_redis_key_refresh_token(user_id)
             stored_refresh_token = await get_from_redis(redis_key)
             if not stored_refresh_token:
                 raise HTTPException(status_code=401, detail="Refresh Token이 만료되었거나 존재하지 않습니다.")

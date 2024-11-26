@@ -37,8 +37,8 @@ class UserRepository:
             logger.error(f"Failed to fetch user: {e}")
             raise HTTPException(status_code=500, detail="데이터베이스 조회 중 오류가 발생했습니다.")
 
-    async def get_user_by_external_id(self, session: AsyncSession, external_id: str) -> User | None:
-        return await self._get_user(session, external_id=external_id)
+    async def get_user_by_id(self, session: AsyncSession, user_id: int) -> User | None:
+        return await self._get_user(session, user_id=user_id)
 
     async def get_user_by_email(self, session: AsyncSession, email: str) -> User | None:
         return await self._get_user(session, email=email)
