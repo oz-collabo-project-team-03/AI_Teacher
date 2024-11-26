@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 class PostCreateRequest(BaseModel):
     content: str = Field(..., max_length=300)
-    image1: str
+    image1: str | None = None
     image2: str | None = None
     image3: str | None = None
     is_with_teacher: bool = False

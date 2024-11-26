@@ -1,10 +1,11 @@
+# type: ignore
 import os
-from typing import Optional, List
+from typing import List, Optional
 from uuid import uuid4
 
 import boto3
 from dotenv import load_dotenv
-from fastapi import UploadFile, HTTPException
+from fastapi import HTTPException, UploadFile
 
 load_dotenv()
 

@@ -1,8 +1,8 @@
 from ulid import ulid  # type: ignore
 
 from src.app.common.models.image import Image
-from src.app.v1.post.entity.post_image import PostImage
 from src.app.v1.post.entity.post import Post
+from src.app.v1.post.entity.post_image import PostImage
 from src.app.v1.post.schema.post import PostCreateRequest
 from src.config.database.postgresql import SessionLocal
 

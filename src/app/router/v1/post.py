@@ -1,8 +1,9 @@
 from typing import Optional
-from fastapi import UploadFile, Form, File, Depends, APIRouter
 
-from src.app.common.utils.image import NCPStorageService
+from fastapi import APIRouter, Depends, File, Form, UploadFile
+
 from src.app.common.utils.dependency import get_current_user
+from src.app.common.utils.image import NCPStorageService  # type: ignore
 from src.app.v1.post.schema.post import PostCreateRequest
 from src.app.v1.post.service.post import PostService
 
@@ -30,4 +31,4 @@ async def post_write(
         is_with_teacher=is_with_teacher,
     )
 
-    return await post_service.create_post(user_id=user_info.get("user_id"), post=post)
+    return await post_service.create_post(user_id=user_info.get("user_id"), post=post)  # type: ignore
