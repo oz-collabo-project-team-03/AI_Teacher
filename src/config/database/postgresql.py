@@ -1,6 +1,6 @@
 import os
-import sqlalchemy
 
+import sqlalchemy
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
@@ -13,14 +13,7 @@ host = os.environ.get("DB_HOST")
 database = os.environ.get("DB_NAME")
 port = int(os.environ.get("DB_PORT", "5432"))
 
-DATABASE_URL = sqlalchemy.engine.URL.create(
-    drivername="postgresql+asyncpg",
-    username=user,
-    password=password,
-    host=host,
-    port=port,
-    database=database,
-)
+DATABASE_URL = os.environ.get("PG_DATABASE_URL")
 
 
 # DATABASE_URL이 None인 경우 처리

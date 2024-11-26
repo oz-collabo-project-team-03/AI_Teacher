@@ -1,10 +1,12 @@
 import os
+
 import pytest
 from sqlalchemy.engine import URL
-from sqlalchemy.future import select
-from src.app.v1.user.entity.user import User  # 실제 모듈 경로로 변경하세요
-from src.app.common.utils.consts import UserRole
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
+from src.app.common.utils.consts import UserRole
+from src.app.v1.user.entity.user import User  # 실제 모듈 경로로 변경하세요
 from src.config.database import SessionLocal
 
 
