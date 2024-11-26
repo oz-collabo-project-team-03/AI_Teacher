@@ -16,12 +16,13 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 # 여기부터 router 추가
-from src.app.router import auth_router, post_router
+from src.app.router import auth_router, post_router, chat_router
 
 app = FastAPI(debug=True)
 
 app.include_router(post_router)
 app.include_router(auth_router)
+app.include_router(chat_router)
 
 
 origins = ["http://localhost:5173", "https://localhost:5173"]
@@ -67,4 +68,4 @@ if __name__ == "__main__":
     # run_check_script()
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
