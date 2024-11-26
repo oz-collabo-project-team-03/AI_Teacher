@@ -5,7 +5,7 @@ from fastapi.responses import Response
 
 from src.app.common.utils.dependency import get_current_user
 from src.app.common.utils.image import NCPStorageService  # type: ignore
-from src.app.v1.post.schema.post import PostCreateRequest, PostUpdateRequest
+from src.app.v1.post.schema.post import PostCreateRequest, PostUpdateRequest, LikeRequest
 from src.app.v1.post.service.post import PostService
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
@@ -72,5 +72,17 @@ async def delete_post(
     post_service: PostService = Depends(PostService),
     user_info: dict = Depends(get_current_user),
 ):
-    await post_service.delete_post(user_id=user_info.get("user_id"), post_id=post_id)
+    await post_service.delete_post(user_id=user_info.get("user_id"), post_id=post_id)  # type: ignore
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{post_id}/like")
+async def like_post(
+    post_id: str,
+    like_request: LikeRequest,
+    post_service: PostService = Depends(PostService),
+    user_info: dict = Depends(get_current_user),
+):
+    await post_service.like_post(user_id=user_info.get("user_id"), post_id=post_id, like=like_request.like)
+
+    return Response(status_code=status.HTTP_200_OK)

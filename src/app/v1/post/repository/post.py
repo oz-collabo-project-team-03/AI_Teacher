@@ -1,9 +1,12 @@
+# type: ignore
+
 from fastapi import HTTPException
-from sqlalchemy import select, delete
+from sqlalchemy import delete, select
 from sqlalchemy.orm import joinedload
 from starlette import status
 from ulid import ulid  # type: ignore
 
+from src.app.v1.post.entity.post_like import PostLike
 from src.app.common.models.image import Image
 from src.app.common.utils.consts import UserRole
 from src.app.v1.post.entity.post import Post
@@ -195,12 +198,72 @@ class PostRepository:
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     @staticmethod
-    async def like_post(post_id: str, user_id: str):
-        raise NotImplementedError
+    async def like_post(user_id: str, post_id: str):
+        async with SessionLocal() as session:
+            try:
+                # post 존재 여부 확인
+                post_query = select(Post).where(Post.external_id == post_id)
+                post_result = await session.execute(post_query)
+                post = post_result.scalar_one_or_none()
+
+                if not post:
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+                # 이미 좋아요 했는지 확인
+                existing_like = await session.execute(select(PostLike).where(PostLike.user_id == int(user_id), PostLike.post_id == post.id))
+                if existing_like.scalar_one_or_none():
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Already liked this post")
+
+                # 좋아요 추가
+                new_like = PostLike(user_id=int(user_id), post_id=post.id)
+                session.add(new_like)
+
+                # 게시글의 좋아요 수 증가
+                post.like_count += 1
+
+                await session.commit()
+
+            except HTTPException:
+                await session.rollback()
+                raise
+            except Exception as e:
+                await session.rollback()
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     @staticmethod
-    async def unlike_post(post_id: str, user_id: str):
-        raise NotImplementedError
+    async def unlike_post(user_id: str, post_id: str):
+        async with SessionLocal() as session:
+            try:
+                # post 존재 여부 확인
+                post_query = select(Post).where(Post.external_id == post_id)
+                post_result = await session.execute(post_query)
+                post = post_result.scalar_one_or_none()
+
+                if not post:
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+                # 좋아요 레코드 찾기
+                like_query = select(PostLike).where(PostLike.user_id == int(user_id), PostLike.post_id == post.id)
+                like_result = await session.execute(like_query)
+                like = like_result.scalar_one_or_none()
+
+                if not like:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Haven't liked this post yet")
+
+                # 좋아요 삭제
+                await session.delete(like)
+
+                # 게시글의 좋아요 수 감소
+                post.like_count = max(0, post.like_count - 1)  # 음수 방지
+
+                await session.commit()
+
+            except HTTPException:
+                await session.rollback()
+                raise
+            except Exception as e:
+                await session.rollback()
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     @staticmethod
     async def get_user_posts(user_id: str):

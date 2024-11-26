@@ -14,5 +14,6 @@ from src.app.v1.user.entity.student import Student
 from src.app.v1.user.entity.study_group import StudyGroup
 from src.app.v1.user.entity.teacher import Teacher
 from src.app.v1.user.entity.user import User
+from src.app.v1.post.entity.post_like import PostLike
 
 # alembic이 인식 가능하게 model import

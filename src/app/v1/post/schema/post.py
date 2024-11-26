@@ -23,6 +23,10 @@ class PostDeleteRequest(BaseModel):
     post_id: str
 
 
+class LikeRequest(BaseModel):
+    like: bool
+
+
 class PostGetResponse(BaseModel):
     user_id: str
     profile_image: str

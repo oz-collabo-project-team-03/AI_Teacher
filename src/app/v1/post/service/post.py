@@ -1,7 +1,7 @@
 from fastapi import File
 from ulid import ulid  # type: ignore
 
-from src.app.v1.post.repository.post import PostRepository
+from src.app.v1.post.repository.post import PostRepository  # type: ignore
 from src.app.v1.post.schema.post import PostCreateRequest, PostUpdateRequest
 
 
@@ -20,3 +20,10 @@ class PostService:
 
     def delete_post(self, user_id: str, post_id: str):
         return self.post_repository.delete_post(user_id=user_id, post_id=post_id)
+
+    def like_post(self, user_id: str, post_id: str, like: bool):
+        if like == True:
+            return self.post_repository.like_post(user_id, post_id)
+
+        if like == False:
+            return self.post_repository.unlike_post(user_id, post_id)
