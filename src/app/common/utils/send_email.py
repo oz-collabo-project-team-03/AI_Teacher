@@ -6,7 +6,8 @@ from email.mime.text import MIMEText
 SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_USER = os.getenv("SMTP_USER", "user")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD","password")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "password")
+
 
 def send_email_async(recipient: str, subject: str, body: str):
     try:
