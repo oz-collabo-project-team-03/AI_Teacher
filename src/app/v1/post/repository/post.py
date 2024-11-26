@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.orm import joinedload
 from starlette import status
 from ulid import ulid  # type: ignore
@@ -163,8 +163,36 @@ class PostRepository:
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     @staticmethod
-    async def delete_post(post_id: str):
-        raise NotImplementedError
+    async def delete_post(user_id: str, post_id: str):
+        async with SessionLocal() as session:
+            try:
+                # 게시글 조회
+                query = select(Post).where(Post.external_id == post_id)
+                result = await session.execute(query)
+                post = result.scalar_one_or_none()
+
+                if not post:
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+                # 작성자 권한 확인
+                if str(post.author_id) != str(user_id):
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have permission to delete this post")
+
+                # 게시글에 연결된 이미지 관계 삭제
+                await session.execute(delete(PostImage).where(PostImage.post_id == post.id))
+                await session.flush()
+
+                # 게시글 삭제
+                await session.execute(delete(Post).where(Post.id == post.id))
+
+                await session.commit()
+
+            except HTTPException:
+                await session.rollback()
+                raise
+            except Exception as e:
+                await session.rollback()
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     @staticmethod
     async def like_post(post_id: str, user_id: str):

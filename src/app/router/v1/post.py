@@ -43,7 +43,7 @@ async def post_get(post_id: str, post_service: PostService = Depends(PostService
 
 
 @router.put("/{post_id}")
-async def post_get(
+async def post_update(
     post_id: str,
     content: str = Form(...),
     image1: Optional[UploadFile] = File(None),
@@ -64,3 +64,13 @@ async def post_get(
     )
     await post_service.update_post(user_id=user_info.get("user_id"), post=update_post, post_id=post_id)  # type: ignore
     return Response(status_code=status.HTTP_200_OK)
+
+
+@router.delete("/{post_id}")
+async def delete_post(
+    post_id: str,
+    post_service: PostService = Depends(PostService),
+    user_info: dict = Depends(get_current_user),
+):
+    await post_service.delete_post(user_id=user_info.get("user_id"), post_id=post_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

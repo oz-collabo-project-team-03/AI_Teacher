@@ -17,3 +17,6 @@ class PostService:
 
     def update_post(self, user_id: str, post_id: str, post: PostUpdateRequest):
         return self.post_repository.update_post(user_id=user_id, post_id=post_id, post=post)
+
+    def delete_post(self, user_id: str, post_id: str):
+        return self.post_repository.delete_post(user_id=user_id, post_id=post_id)
