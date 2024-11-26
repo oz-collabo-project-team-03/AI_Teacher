@@ -1,16 +1,17 @@
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
+from starlette import status
 from ulid import ulid  # type: ignore
 
+from src.app.common.models.image import Image
 from src.app.common.utils.consts import UserRole
+from src.app.v1.post.entity.post import Post
+from src.app.v1.post.entity.post_image import PostImage
+from src.app.v1.post.schema.post import PostCreateRequest, PostUpdateRequest
 from src.app.v1.user.entity.student import Student
 from src.app.v1.user.entity.teacher import Teacher
 from src.app.v1.user.entity.user import User
-from src.app.common.models.image import Image
-from src.app.v1.post.entity.post import Post
-from src.app.v1.post.entity.post_image import PostImage
-from src.app.v1.post.schema.post import PostCreateRequest
 from src.config.database.postgresql import SessionLocal
 
 
@@ -76,7 +77,7 @@ class PostRepository:
             # 이미지 URL 설정
             image_paths = [None, None, None]
             for idx, img in enumerate(images[:3]):
-                image_paths[idx] = img.image_path if img else None
+                image_paths[idx] = img.image_path if img else None  # type: ignore
 
             # 선생님 정보 조회 (is_with_teacher가 True인 경우)
             teacher_info = None
@@ -113,8 +114,53 @@ class PostRepository:
             return response
 
     @staticmethod
-    async def update_post(post_id: str, post: Post):
-        raise NotImplementedError
+    async def update_post(user_id: str, post_id: str, post: PostUpdateRequest):
+        async with SessionLocal() as session:
+            # 게시글 조회
+            query = select(Post).where(Post.external_id == post_id)
+            result = await session.execute(query)
+            existing_post = result.scalar_one_or_none()
+
+            if not existing_post:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+            # 작성자 권한 확인
+            if str(existing_post.author_id) != str(user_id):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have permission to update this post")
+
+            try:
+                # 게시글 업데이트
+                existing_post.content = post.content
+                existing_post.is_with_teacher = post.is_with_teacher
+
+                # 새 이미지 목록에서 None이 아닌 것만 필터링
+                new_images = [img for img in [post.image1, post.image2, post.image3] if img is not None]
+
+                if new_images:  # 새로운 이미지가 있는 경우에만 이미지 업데이트 수행
+                    # 기존 이미지 정보 조회 및 삭제
+                    old_images_query = select(PostImage).where(PostImage.post_id == existing_post.id)
+                    old_images_result = await session.execute(old_images_query)
+                    old_images = old_images_result.scalars().all()
+
+                    for old_image in old_images:
+                        await session.delete(old_image)
+
+                    # 새 이미지 추가
+                    for image_url in new_images:
+                        # Image 테이블에 새 이미지 추가
+                        new_image = Image(image_path=image_url)
+                        session.add(new_image)
+                        await session.flush()
+
+                        # PostImage 테이블에 연결 정보 추가
+                        post_image = PostImage(post_id=existing_post.id, image_id=new_image.id)
+                        session.add(post_image)
+
+                await session.commit()
+
+            except Exception as e:
+                await session.rollback()
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     @staticmethod
     async def delete_post(post_id: str):
