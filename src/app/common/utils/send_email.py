@@ -11,7 +11,8 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "password")
 
 def send_email_async(recipient: str, subject: str, body: str):
     try:
-        msg = MIMEText("인증코드는 000000입니다.")
+        # msg = MIMEText("인증코드는 000000입니다.")
+        msg = MIMEMultipart()
         msg["From"] = SMTP_USER
         msg["To"] = recipient
         msg["Subject"] = subject
