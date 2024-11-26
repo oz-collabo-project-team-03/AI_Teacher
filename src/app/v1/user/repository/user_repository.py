@@ -38,7 +38,7 @@ class UserRepository:
             raise HTTPException(status_code=500, detail="데이터베이스 조회 중 오류가 발생했습니다.")
 
     async def get_user_by_id(self, session: AsyncSession, user_id: int) -> User | None:
-        return await self._get_user(session, user_id=user_id)
+        return await self._get_user(session, id=user_id)
 
     async def get_user_by_email(self, session: AsyncSession, email: str) -> User | None:
         return await self._get_user(session, email=email)
@@ -129,10 +129,10 @@ class UserRepository:
                 logger.error(f"Error updating password: {e}")
                 raise HTTPException(status_code=500, detail="비밀번호 업데이트 중 오류가 발생했습니다.")
 
-    async def update_user(self, session: AsyncSession, external_id: str, update_data: dict):
+    async def update_user(self, session: AsyncSession, user_id: str, update_data: dict):
         async with session.begin():
             try:
-                user = await self._get_user(session, id=external_id)
+                user = await self._get_user(session, id=user_id)
                 if not user:
                     raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
@@ -150,5 +150,5 @@ class UserRepository:
 
                 return user
             except SQLAlchemyError as e:
-                logger.error(f"Error updating user by external_id: {e}")
+                logger.error(f"Error updating user by user_id: {e}")
                 raise HTTPException(status_code=500, detail="사용자 정보 업데이트 중 오류가 발생했습니다.")
