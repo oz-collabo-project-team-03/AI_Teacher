@@ -15,6 +15,15 @@ from src.app.v1.post.service.post import PostService
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
+@router.get("/me")
+async def get_my_posts(
+    page: int = Query(default=1, gt=0),
+    post_service: PostService = Depends(PostService),
+    user_info: dict = Depends(get_current_user),
+):
+    return await post_service.get_my_posts(page=page, user_id=user_info.get("user_id"))  # type: ignore
+
+
 @router.post("/write")
 async def post_write(
     content: str = Form(...),
@@ -90,6 +99,15 @@ async def like_post(
     await post_service.like_post(user_id=user_info.get("user_id"), post_id=post_id, like=like_request.like)  # type: ignore
 
     return Response(status_code=status.HTTP_200_OK)
+
+
+@router.get("/users/{user_id}")
+async def get_user_posts(
+    user_id: str,
+    page: int = Query(default=1, gt=0),
+    post_service: PostService = Depends(PostService),
+):
+    return await post_service.get_user_posts(user_id=user_id, page=page)
 
 
 @router.get("")

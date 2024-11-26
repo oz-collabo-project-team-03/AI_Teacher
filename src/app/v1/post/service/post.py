@@ -30,3 +30,9 @@ class PostService:
 
     def get_posts(self, page: int):
         return self.post_repository.get_posts(page=page)
+
+    def get_my_posts(self, user_id: str, page: int):
+        return self.post_repository.get_user_posts(user_id=user_id, page=page)
+
+    def get_user_posts(self, user_id: str, page: int):
+        return self.post_repository.get_user_posts(user_id=user_id, page=page)
