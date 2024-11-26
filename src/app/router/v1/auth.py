@@ -24,23 +24,22 @@ user_repo = UserRepository()
 user_service = UserService(user_repo=user_repo)
 
 
-# @router.post("/email/send", response_model=MessageResponse)
-# async def send_email_verification_code(
-#     payload: EmailRequest,
-#     background_tasks: BackgroundTasks,
-#     session: AsyncSession = Depends(get_session),
-# ):
-#     return await user_service.send_verification_code(
-#         email=payload.email,
-#         session=session,
-#         background_tasks=background_tasks,
-#     )
-#
-#
-# @router.post("/email/verify", response_model=MessageResponse)
-# async def verify_email_code(payload: EmailVerifyRequest):
-#     return await user_service.verify_email_code(email=payload.email, code=payload.code)
-#
+@router.post("/email/send", response_model=MessageResponse)
+async def send_email_verification_code(
+    payload: EmailRequest,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(get_session),
+):
+    return await user_service.send_verification_code(
+        email=payload.email,
+        session=session,
+        background_tasks=background_tasks,
+    )
+
+
+@router.post("/email/verify", response_model=MessageResponse)
+async def verify_email_code(payload: EmailVerifyRequest):
+    return await user_service.verify_email_code(email=payload.email, code=payload.code)
 
 
 @router.post("/register", response_model=dict)
