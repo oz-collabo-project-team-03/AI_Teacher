@@ -1,3 +1,4 @@
+from fastapi import File
 from ulid import ulid  # type: ignore
 
 from src.app.v1.post.repository.post import PostRepository
