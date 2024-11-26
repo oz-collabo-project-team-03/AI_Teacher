@@ -223,6 +223,7 @@ class UserService:
             "refresh_token": refresh_token,
             "token_type": "Bearer",
             "expires_in": 900,
+            "role": role,
             "message": "로그인에 성공하였습니다.",
         }
 
@@ -232,15 +233,15 @@ class UserService:
 
         try:
             payload = verify_access_token(refresh_token)
-            external_id = payload.get("sub", 0)
-            if not external_id:
+            user_id = int(payload.get("sub", 0))
+            if not user_id:
                 raise HTTPException(status_code=401, detail="Refresh Token 정보가 유효하지 않습니다.")
 
-            user = await self.user_repo.get_user_by_external_id(session, external_id)
+            user = await self.user_repo.get_user_by_id(session, user_id)
             if not user:
                 raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
-            redis_key = get_redis_key_refresh_token(external_id)
+            redis_key = get_redis_key_refresh_token(user_id)
             stored_refresh_token = await get_from_redis(redis_key)
             if not stored_refresh_token:
                 raise HTTPException(status_code=401, detail="Refresh Token이 만료되었거나 존재하지 않습니다.")
@@ -305,55 +306,55 @@ class UserService:
             logger.error(f"로그아웃 처리 중 오류 발생: {e}")
             raise HTTPException(status_code=500, detail="로그아웃 처리 중 서버 오류가 발생했습니다.")
 
-    #
-    # async def find_email_by_phone(self, phone: str, session: AsyncSession) -> dict:
-    #     if not phone:
-    #         raise HTTPException(status_code=400, detail="핸드폰 번호를 입력해 주세요.")
-    #
-    #     query = select(User).where(User.phone == phone)
-    #     result = await session.execute(query)
-    #     user = result.scalars().first()
-    #
-    #     if not user:
-    #         raise HTTPException(status_code=404, detail="해당 번호로 등록된 유저를 찾을 수 없습니다.")
-    #
-    #     email = user.email
-    #     masked_email = self._mask_email(email)  # 이메일 마스킹 처리
-    #     return {"email": masked_email}
-    #
-    # def _mask_email(self, email: str) -> str:
-    #     try:
-    #         local_part, domain_part = email.split("@")
-    #         masked_local = local_part[0] + "***"
-    #         return f"{masked_local}@{domain_part}"
-    #     except Exception:
-    #         raise HTTPException(status_code=400, detail="잘못된 이메일 형식입니다.")
-    #
-    # async def reset_password_service(self, email: str, session: AsyncSession) -> dict:
-    #     query = select(User).where(User.email == email)
-    #     result = await session.execute(query)
-    #     user = result.scalars().first()
-    #
-    #     if not user:
-    #         raise HTTPException(status_code=404, detail="등록되지 않은 이메일입니다.")
-    #
-    #     temp_password = self._generate_temp_password()
-    #     hashed_password = hash_password(temp_password)
-    #
-    #     user.password = hashed_password
-    #     try:
-    #         await session.commit()
-    #     except Exception as e:
-    #         await session.rollback()
-    #         raise HTTPException(status_code=500, detail=f"임시 비밀번호 저장 실패: {str(e)}")
-    #
-    #     return {"message": "임시 비밀번호가 발급되었습니다.", "temp_password": temp_password}
-    #
-    # def _generate_temp_password(self, length: int = 12) -> str:
-    #     if length < 10 or length > 20:
-    #         raise ValueError("비밀번호 길이는 10~20자 사이여야 합니다.")
-    #     characters = string.ascii_letters + string.digits
-    #     return "".join(random.choices(characters, k=length))
+    async def find_email_by_phone(self, phone: str, session: AsyncSession) -> dict:
+        if not phone:
+            raise HTTPException(status_code=400, detail="핸드폰 번호를 입력해 주세요.")
+
+        query = select(User).where(User.phone == phone)
+        result = await session.execute(query)
+        user = result.scalars().first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="해당 번호로 등록된 유저를 찾을 수 없습니다.")
+
+        email = user.email
+        masked_email = self._mask_email(email)  # 이메일 마스킹 처리
+        return {"email": masked_email}
+
+    def _mask_email(self, email: str) -> str:
+        try:
+            local_part, domain_part = email.split("@")
+            masked_local = local_part[0] + "***"
+            return f"{masked_local}@{domain_part}"
+        except Exception:
+            raise HTTPException(status_code=400, detail="잘못된 이메일 형식입니다.")
+
+    async def reset_password_service(self, email: str, session: AsyncSession) -> dict:
+        query = select(User).where(User.email == email)
+        result = await session.execute(query)
+        user = result.scalars().first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="등록되지 않은 이메일입니다.")
+
+        temp_password = self._generate_temp_password()
+        hashed_password = hash_password(temp_password)
+
+        user.password = hashed_password
+        try:
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+            raise HTTPException(status_code=500, detail=f"임시 비밀번호 저장 실패: {str(e)}")
+
+        return {"message": "임시 비밀번호가 발급되었습니다.", "temp_password": temp_password}
+
+    def _generate_temp_password(self, length: int = 12) -> str:
+        if length < 10 or length > 20:
+            raise ValueError("비밀번호 길이는 10~20자 사이여야 합니다.")
+        characters = string.ascii_letters + string.digits
+        return "".join(random.choices(characters, k=length))
+
     #
     # async def update_verify_password(self, session: AsyncSession, token: str, password: str) -> dict:
     #
