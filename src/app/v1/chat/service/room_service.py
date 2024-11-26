@@ -24,8 +24,9 @@ class RoomService:
 
         # 응답 데이터 생성
         participants = []
-        for user_id in user_list:
-            participants.append({"user_id": user_id})
+
+        participants.append({"student_id": user_list[0]})
+        participants.append({"teacher_id": user_list[1]})
 
         response = RoomCreateResponse(room_id=new_room.id, title=new_room.title, help_checked=new_room.help_checked, participants=participants)
 
