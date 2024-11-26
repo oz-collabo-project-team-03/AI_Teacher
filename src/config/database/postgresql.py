@@ -7,11 +7,11 @@ from sqlalchemy.orm import declarative_base
 
 load_dotenv()
 
-user = os.environ.get("DB_USER")
-password = os.environ.get("DB_PASSWORD")
-host = os.environ.get("DB_HOST")
-database = os.environ.get("DB_NAME")
-port = int(os.environ.get("DB_PORT", "5432"))
+# user = os.environ.get("DB_USER")
+# password = os.environ.get("DB_PASSWORD")
+# host = os.environ.get("DB_HOST")
+# database = os.environ.get("DB_NAME")
+# port = int(os.environ.get("DB_PORT", "5432"))
 
 DATABASE_URL = os.environ.get("PG_DATABASE_URL")
 

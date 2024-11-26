@@ -30,3 +30,6 @@ class User(Base):
     student = relationship("Student", back_populates="user", uselist=False, cascade="all, delete-orphan")
     teacher = relationship("Teacher", back_populates="user", uselist=False, cascade="all, delete-orphan")
     tag = relationship("Tag", back_populates="user", uselist=False, cascade="all, delete-orphan")
+
+    # one-to-many
+    participant = relationship("Participant", back_populates="user")

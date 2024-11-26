@@ -7,7 +7,7 @@ from redis.asyncio import Redis
 load_dotenv()
 
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.environ.get("REDIS_PORT", "6378"))
+REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 REDIS_DB_CACHE = int(os.environ.get("REDIS_DB_CACHE", "0"))
 
 redis_cache: Redis = Redis(

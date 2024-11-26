@@ -1,5 +1,6 @@
 from sqlalchemy import BigInteger, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.ext.declarative import declared_attr
 
 from src.config.database import Base
 
@@ -11,4 +12,4 @@ class Participant(Base):
     room_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("rooms.id"), nullable=False)
     user = relationship("User", back_populates="participant")
     room = relationship("Room", back_populates="participant")
-    message = relationship("Message", back_populates="participant")
+    # messages = relationship("Message", back_populates="participants")
