@@ -31,8 +31,10 @@ from src.app.common.utils.security import (
 )
 from src.app.common.utils.send_email import send_email_async
 from src.app.common.utils.verify_password import (
+    generate_temp_password,
     hash_password,
     validate_password_complexity,
+    validate_temp_password_complexity,
     verify_password,
 )
 from src.app.v1.user.entity.user import User
@@ -132,12 +134,14 @@ class UserService:
         return {"message": "이메일 인증이 완료되었습니다."}
 
     async def register_user(self, payload: Union[StudentRegisterRequest, TeacherRegisterRequest], session: AsyncSession):
-        logger.info(f"Registering user with payload: {payload}")
         try:
             if payload.password != payload.password_confirm:
                 raise HTTPException(status_code=400, detail="비밀번호 확인이 일치하지 않습니다.")
-            if not validate_password_complexity(payload.password):
-                raise HTTPException(status_code=400, detail="비밀번호는 10~20자의 영문(대소문자), 숫자가 포함되어야 합니다.")
+
+            validation_result = validate_password_complexity(payload.password)
+
+            if not validation_result:
+                raise HTTPException(status_code=400, detail="비밀번호는 10~20자의 영문(대소문자), 숫자, 특수문자가 포함되어야 합니다.")
 
             hashed_password = hash_password(payload.password)
 
@@ -337,7 +341,11 @@ class UserService:
         if not user:
             raise HTTPException(status_code=404, detail="등록되지 않은 이메일입니다.")
 
-        temp_password = self._generate_temp_password()
+        temp_password = generate_temp_password()
+
+        if not validate_temp_password_complexity(temp_password):
+            raise HTTPException(status_code=500, detail="임시 비밀번호 생성 실패: 규칙 위반")
+
         hashed_password = hash_password(temp_password)
 
         user.password = hashed_password
@@ -345,15 +353,9 @@ class UserService:
             await session.commit()
         except Exception as e:
             await session.rollback()
-            raise HTTPException(status_code=500, detail=f"임시 비밀번호 저장 실패: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"서버오류: 임시 비밀번호 저장 실패: {str(e)}")
 
-        return {"message": "임시 비밀번호가 발급되었습니다.", "temp_password": temp_password}
-
-    def _generate_temp_password(self, length: int = 12) -> str:
-        if length < 10 or length > 20:
-            raise ValueError("비밀번호 길이는 10~20자 사이여야 합니다.")
-        characters = string.ascii_letters + string.digits
-        return "".join(random.choices(characters, k=length))
+        return {"message": "임시 비밀번호가 발급되었습니다.", "email": email, "temp_password": temp_password}
 
     #
     # async def update_verify_password(self, session: AsyncSession, token: str, password: str) -> dict:

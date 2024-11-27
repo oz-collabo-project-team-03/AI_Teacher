@@ -61,7 +61,7 @@ class PhoneRequest(BaseModel):
 
 class UpdatePasswordRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    password: str = Field(..., min_length=10, max_length=20, description="10~20자리의 영문+숫자 조합")
+    email: EmailStr
 
 
 class UpdateUserInfoRequest(BaseModel):

@@ -1,3 +1,5 @@
+from sqlalchemy.orm import configure_mappers
+
 from src.app.common.models.image import Image
 from src.app.common.models.tag import Tag
 from src.app.v1.chat.entity.message import Message
@@ -15,8 +17,6 @@ from src.app.v1.user.entity.student import Student
 from src.app.v1.user.entity.study_group import StudyGroup
 from src.app.v1.user.entity.teacher import Teacher
 from src.app.v1.user.entity.user import User
-
-from sqlalchemy.orm import configure_mappers
 
 # 모든 모델이 import된 후에 configure_mappers 호출
 configure_mappers()

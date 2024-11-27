@@ -1,14 +1,30 @@
+import random
 import re
+import string
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
+from fastapi import HTTPException
 
 # Argon2 -> 비밀번호 해쉬화
 ph = PasswordHasher()
 
 
+import re
+
+
 def validate_password_complexity(password: str) -> bool:
-    return bool(re.match(r"^(?=.*[a-zA-Z])(?=.*\d)[A-Za-z\d]{10,20}$", password))
+    return bool(re.match(r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{10,20}$", password))
+
+
+def generate_temp_password(length: int = 16) -> str:
+    characters = string.ascii_letters + string.digits + "!@#$%^&*"
+    temp_password = "".join(random.choices(characters, k=length))
+    return temp_password
+
+
+def validate_temp_password_complexity(password: str) -> bool:
+    return bool(re.match(r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{10,20}$", password))
 
 
 def hash_password(password: str) -> str:

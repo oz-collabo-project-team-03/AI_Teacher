@@ -1,6 +1,6 @@
 from sqlalchemy import BigInteger, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.config.database import Base
 

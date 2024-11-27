@@ -18,6 +18,7 @@ from src.app.v1.user.schema.responseDto import (
     AccessTokenResponse,
     EmailResponse,
     MessageResponse,
+    TempPasswordResponse,
     TokenResponse,
     UserInfoResponse,
 )
@@ -81,12 +82,14 @@ async def find_email_by_phone(payload: PhoneRequest, session: AsyncSession = Dep
     return await user_service.find_email_by_phone(phone=payload.phone, session=session)
 
 
-# @router.post("/verify/password", response_model=UserInfoResponse)
-# async def verify_password(
-#         payload: UpdatePasswordRequest,
-#         session: AsyncSession = Depends(get_session),
-#  ):
-#      return await user_service.reset_password_service(email=payload.email, session=session)
+@router.post("/verify/password", response_model=TempPasswordResponse)
+async def verify_password(
+    payload: UpdatePasswordRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    return await user_service.reset_password_service(email=payload.email, session=session)
+
+
 # #
 # #
 # # # 유저 정보 업데이트
