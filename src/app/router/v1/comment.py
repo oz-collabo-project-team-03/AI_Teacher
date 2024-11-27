@@ -24,15 +24,13 @@ async def create_comment(
         comment = await comment_service.create_comment_with_tags(
             session=session,
             post_id=post_id,
-            author_id=int(current_user["user_id"]),  # 정수형 변환 추가
+            author_id=int(current_user["user_id"]),
             content=payload.content,
             tag_nicknames=payload.tags,
         )
 
-        # 작성자의 닉네임 조회
-        author_query = select(Tag.nickname).where(Tag.user_id == int(current_user["user_id"]))  # 정수형 변환 추가
-        author_result = await session.execute(author_query)
-        author_nickname = author_result.scalar() or "Anonymous"
+        # 닉네임 조회
+        author_nickname = await comment_service.get_user_nickname(session, int(current_user["user_id"]))
 
         return CommentResponse(
             comment_id=comment.id,

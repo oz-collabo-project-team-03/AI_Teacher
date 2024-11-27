@@ -88,3 +88,8 @@ class CommentService:
                 raise HTTPException(status_code=403, detail="해당 댓글의 작성자가 아닙니다.")
 
             await session.delete(comment)
+
+    async def get_user_nickname(self, session: AsyncSession, user_id: int) -> str:
+        query = select(Tag.nickname).where(Tag.user_id == user_id)
+        result = await session.execute(query)
+        return result.scalar() or "Anonymous"
