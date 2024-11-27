@@ -16,7 +16,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 # 여기부터 router 추가
-from src.app.router import auth_router, post_router, chat_router
+from src.app.router import auth_router, chat_router, comment_router, post_router
 
 app = FastAPI(debug=True)
 
@@ -24,6 +24,7 @@ app.include_router(post_router)
 app.include_router(auth_router)
 app.include_router(chat_router)
 
+app.include_router(comment_router)
 
 origins = ["http://localhost:5173", "https://localhost:5173"]
 
