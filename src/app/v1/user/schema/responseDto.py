@@ -26,7 +26,14 @@ class MessageResponse(BaseModel):
 
 class EmailResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    email: str
+    email: EmailStr
+
+
+class TempPasswordResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    message: str
+    email: EmailStr
+    temp_password: str
 
 
 class UserInfoResponse(BaseModel):

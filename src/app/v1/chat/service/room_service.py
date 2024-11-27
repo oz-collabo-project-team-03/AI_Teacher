@@ -1,7 +1,8 @@
 from fastapi import HTTPException
+
+from src.app.v1.chat.repository.room_repository import RoomRepository
 from src.app.v1.chat.schema.room_request import RoomCreateRequest
 from src.app.v1.chat.schema.room_response import RoomCreateResponse
-from src.app.v1.chat.repository.room_repository import RoomRepository
 
 
 class RoomService:

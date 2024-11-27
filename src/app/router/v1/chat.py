@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends
+
+from src.app.common.factory import get_room_service
 from src.app.common.utils.dependency import get_current_user
 from src.app.v1.chat.schema.room_request import RoomCreateRequest
 from src.app.v1.chat.schema.room_response import RoomCreateResponse
 from src.app.v1.chat.service.room_service import RoomService
-from src.app.common.factory import get_room_service
 
 router = APIRouter(prefix="/chat", tags=["chats"])
 
