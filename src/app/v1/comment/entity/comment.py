@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import BigInteger, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
+
 from src.config.database import Base
 
 
@@ -15,3 +16,6 @@ class Comment(Base):
     content: Mapped[str] = mapped_column(String(300), nullable=False)
     recomment_count: Mapped[int] = mapped_column(BigInteger, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+    parent_comment_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("comments.id", ondelete="CASCADE"), nullable=True
+    )
