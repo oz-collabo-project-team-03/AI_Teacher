@@ -24,6 +24,7 @@ class NCPStorageService:
             service_name, endpoint_url=endpoint_url, aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region_name
         )
         self.bucket_name = bucket_name
+        self.endpoint_url = endpoint_url
 
     def _generate_unique_filename(self, original_filename: str) -> str:
         """
@@ -74,3 +75,6 @@ class NCPStorageService:
                 uploaded_urls.append(None)
 
         return uploaded_urls
+
+    def get_s3_url(self, object_key: str) -> str:
+        return f"{self.endpoint_url}/{self.bucket_name}/{object_key}"

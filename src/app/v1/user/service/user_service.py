@@ -13,13 +13,14 @@ from fastapi import BackgroundTasks, HTTPException, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# from src.app.common.utils.send_email import send_email_async
 from src.app.common.utils.consts import UserRole
 from src.app.common.utils.redis_utils import (
+    REFRESH_TOKEN_TTL,
     delete_from_redis,
     get_from_redis,
     get_redis_key_jti,
     get_redis_key_refresh_token,
+    mark_jti_used,
     save_to_redis,
 )
 from src.app.common.utils.security import (
@@ -220,14 +221,22 @@ class UserService:
             httponly=True,  # 클라이언트 측 JavaScript에서 쿠키에 접근하지 못하도록 제한 ->XSS공격으로부터 보호하기 위해
             secure=SECURE_COOKIE,  # 배포 시에는 True 로 전환 ->  HTTPS 연결에서만 쿠키를 전송하도록 제한
             samesite="Strict",  # type: ignore # CSRF(Cross-Site Request Forgery) 공격을 방지
-            max_age=7 * 24 * 3600,
+            max_age=REFRESH_TOKEN_TTL,
         )
+        first_login = False
+        if role == "student" and user.first_login:
+            first_login = True
+            user.first_login = False
+            session.add(user)
+            await session.commit()
+
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
             "token_type": "Bearer",
             "expires_in": 900,
             "role": role,
+            "first_login": first_login,  # 학생인 경우에만 의미 있는 값
             "message": "로그인에 성공하였습니다.",
         }
 
@@ -292,13 +301,16 @@ class UserService:
                 raise HTTPException(status_code=401, detail="Access Token이 만료되었습니다.")
 
             jti = payload.get("jti")
-            external_id = payload.get("sub")
+            user_id = payload.get("sub")
+            if not jti or not user_id:
+                raise HTTPException(status_code=400, detail="Access Token에 JTI 또는 사용자 ID 정보가 없습니다.")
 
             # Redis에서 Refresh Token 삭제
-            if external_id:
-                redis_key = get_redis_key_refresh_token(external_id)
-                await delete_from_redis(redis_key)
-                logger.info(f"Redis에서 사용자 {external_id}의 키 {redis_key} 삭제 완료.")
+            redis_key = get_redis_key_refresh_token(user_id)
+            await delete_from_redis(redis_key)
+            logger.info(f"Redis에서 사용자 {user_id}의 키 {redis_key} 삭제 완료.")
+
+            await mark_jti_used(jti, remaining_time)
 
             # 쿠키 삭제
             response.delete_cookie(key="refresh_token")
@@ -313,17 +325,22 @@ class UserService:
     async def find_email_by_phone(self, phone: str, session: AsyncSession) -> dict:
         if not phone:
             raise HTTPException(status_code=400, detail="핸드폰 번호를 입력해 주세요.")
+        try:
+            email = await self.user_repo.get_user_email_by_phone(session, phone)
 
-        query = select(User).where(User.phone == phone)
-        result = await session.execute(query)
-        user = result.scalars().first()
+            if not email:
+                raise HTTPException(status_code=404, detail="해당 번호로 등록된 유저를 찾을 수 없습니다.")
 
-        if not user:
-            raise HTTPException(status_code=404, detail="해당 번호로 등록된 유저를 찾을 수 없습니다.")
+            masked_email = self._mask_email(email)  # 이메일 마스킹 처리
+            return {"email": masked_email}
 
-        email = user.email
-        masked_email = self._mask_email(email)  # 이메일 마스킹 처리
-        return {"email": masked_email}
+        except HTTPException as e:
+            logger.error(f"이메일 검색 실패: {e.detail}")
+            raise
+
+        except Exception as e:
+            logger.error(f"예기치 못한 오류 발생: {e}")
+            raise HTTPException(status_code=500, detail="이메일 검색 처리 중 서버 오류가 발생했습니다.")
 
     def _mask_email(self, email: str) -> str:
         try:
@@ -333,108 +350,101 @@ class UserService:
         except Exception:
             raise HTTPException(status_code=400, detail="잘못된 이메일 형식입니다.")
 
-    async def reset_password_service(self, email: str, session: AsyncSession) -> dict:
-        query = select(User).where(User.email == email)
-        result = await session.execute(query)
-        user = result.scalars().first()
-
-        if not user:
-            raise HTTPException(status_code=404, detail="등록되지 않은 이메일입니다.")
-
-        temp_password = generate_temp_password()
-
-        if not validate_temp_password_complexity(temp_password):
-            raise HTTPException(status_code=500, detail="임시 비밀번호 생성 실패: 규칙 위반")
-
-        hashed_password = hash_password(temp_password)
-
-        user.password = hashed_password
+    async def reset_password(self, email: str, session: AsyncSession) -> dict:
         try:
-            await session.commit()
+            temp_password = generate_temp_password()
+
+            if not validate_temp_password_complexity(temp_password):
+                raise HTTPException(status_code=500, detail="임시 비밀번호 생성 실패: 규칙 위반")
+
+            await self.user_repo.reset_user_password(session, email, temp_password)
+
+            logger.info(f"임시 비밀번호 발급 완료: {email}")
+            return {
+                "message": "임시 비밀번호가 발급되었습니다.",
+                "email": email,
+                "temp_password": temp_password,
+            }
+
         except Exception as e:
-            await session.rollback()
-            raise HTTPException(status_code=500, detail=f"서버오류: 임시 비밀번호 저장 실패: {str(e)}")
+            logger.error(f"임시 비밀번호 발급 중 오류 발생: {e}")
+            raise HTTPException(status_code=500, detail="임시 비밀번호 발급 중 오류가 발생했습니다.")
 
-        return {"message": "임시 비밀번호가 발급되었습니다.", "email": email, "temp_password": temp_password}
+    async def checking_password(self, user_id: int, password: str, session: AsyncSession) -> dict:
+        try:
+            user = await self.user_repo.get_user_by_id(session, user_id)
+            if not user:
+                logger.error(f"사용자를 찾을 수 없습니다. user_id: {user_id}")
+                raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
-    #
-    # async def update_verify_password(self, session: AsyncSession, token: str, password: str) -> dict:
-    #
-    #     token_payload = verify_access_token(token)
-    #     user_id = int(token_payload.get("sub"))
-    #
-    #     user = await self.user_repo.get_user_by_id(session, user_id)
-    #     if not user:
-    #         raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
-    #
-    #     if not verify_password(password, user.password):
-    #         raise HTTPException(status_code=401, detail="비밀번호가 일치하지 않습니다.")
-    #
-    #     user_info = {
-    #         "email": user.email,
-    #         "phone": user.phone,
-    #     }
-    #
-    #     if user.role == UserRole.STUDENT:
-    #         user_info.update(
-    #             {
-    #                 "school": user.student.school,
-    #                 "grade": user.student.grade.name,
-    #             }
-    #         )
-    #
-    #     return user_info
-    #
-    # async def update_user_info(self, session: AsyncSession, token: str, update_data: dict) -> dict:
-    #     token_payload = verify_access_token(token)
-    #     user_id = int(token_payload.get("sub"))
-    #     role = token_payload.get("role")
-    #
-    #     updatable_fields = self._get_updatable_fields(role)
-    #     self._validate_update_fields(update_data, updatable_fields)
-    #
-    #     update_dict = await self._prepare_update_data(session, update_data)
-    #
+            if not verify_password(password, user.password):
+                logger.error(f"비밀번호 검증 실패. user_id: {user_id}")
+                raise HTTPException(status_code=401, detail="비밀번호가 일치하지 않습니다.")
+
+            return {"message": "비밀번호 검증에 성공했습니다."}
+
+        except HTTPException as e:
+            raise
+
+        except Exception as e:
+            raise HTTPException(status_code=500, detail="서버 오류: 비밀번호 검증 실패")
+
+    async def update_user_info(self, user_id: int, role: str, update_data: dict, session: AsyncSession) -> dict:
+        try:
+            if "email" in update_data:
+                try:
+                    validate_email(update_data["email"])
+                except EmailNotValidError as e:
+                    logger.error(f"유효하지 않은 이메일 형식: {update_data['email']} - {str(e)}")
+                    raise HTTPException(status_code=400, detail="유효하지 않은 이메일 형식입니다.")
+
+            if "password" in update_data:
+                if not validate_password_complexity(update_data["password"]):
+                    logger.error(f"유효하지 않은 비밀번호 형식: {update_data['password']}")
+                    raise HTTPException(status_code=400, detail="유효하지 않은 비밀번호 형식입니다.")
+                if update_data["password"] != update_data.get("password_confirm"):
+                    logger.error("비밀번호와 비밀번호 확인이 일치하지 않습니다.")
+                    raise HTTPException(status_code=400, detail="비밀번호가 일치하지 않습니다.")
+                update_data["password"] = hash_password(update_data["password"])
+                del update_data["password_confirm"]
+
+            common_fields = {key: update_data[key] for key in ("email", "phone", "password") if key in update_data}
+
+            if role == "teacher":
+                await self.user_repo.update_teacher_info(session, user_id, common_fields)
+            elif role == "student":
+                student_fields = {key: update_data[key] for key in ("school", "grade") if key in update_data}
+                await self.user_repo.update_student_info(session, user_id, common_fields, student_fields)
+            else:
+                logger.error(f"잘못된 역할 지정: role={role}")
+                raise HTTPException(status_code=400, detail="잘못된 역할입니다.")
+
+            logger.info(f"사용자 정보 업데이트 성공: user_id={user_id}, role={role}")
+            return {"message": "회원 정보가 성공적으로 변경되었습니다."}
+
+        except HTTPException as e:
+            logger.error(f"사용자 정보 업데이트 실패: {e.detail}")
+            raise
+        except Exception as e:
+            logger.error(f"사용자 정보 업데이트 중 서버 오류 발생: {str(e)}")
+            raise HTTPException(status_code=500, detail="서버 오류: 사용자 정보 업데이트 실패")
+
+    # async def get_user_profile(self, session: AsyncSession, user_id: int) -> dict:
     #     try:
-    #         await self.user_repo.update_user(session, user_id, update_dict)
-    #         return {"message": "성공적으로 업데이트되었습니다."}
-    #     except HTTPException:
-    #         raise
+    #         user = await self.user_repo.get_user_by_id(session, user_id)
+    #         if not user:
+    #             logger.error(f"User not found: user_id={user_id}")
+    #             raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+    #
+    #         if user.role == UserRole.STUDENT:
+    #             return await self.user_repo.get_student_profile(session, user)
+    #
+    #         elif user.role == UserRole.TEACHER:
+    #             return await self.user_repo.get_teacher_profile(session, user)
+    #
+    #         else:
+    #             logger.error(f"Invalid role for user_id={user_id}")
+    #             raise HTTPException(status_code=400, detail="유효하지 않은 사용자 역할입니다.")
     #     except Exception as e:
-    #         logger.error(f"Error updating user info: {e}")
-    #         raise HTTPException(status_code=500, detail="사용자 정보 업데이트 중 오류가 발생했습니다.")
-    #
-    # def _get_updatable_fields(self, role):
-    #     if role == UserRole.TEACHER:
-    #         return {"email", "password", "phone"}
-    #     elif role == UserRole.STUDENT:
-    #         return {"email", "password", "phone", "school", "grade"}
-    #     else:
-    #         raise HTTPException(status_code=400, detail="유효하지 않은 사용자 역할입니다.")
-    #
-    # def _validate_update_fields(self, update_data, updatable_fields):
-    #     invalid_fields = set(update_data.keys()) - updatable_fields
-    #     if invalid_fields:
-    #         raise HTTPException(status_code=400, detail=f"{', '.join(invalid_fields)}는 변경할 수 없는 필드입니다.")
-    #
-    # async def _prepare_update_data(self, session, update_data):
-    #     update_dict = {}
-    #     for field, value in update_data.items():
-    #         if field == "email":
-    #             await self._validate_email(session, value)
-    #             update_dict["email"] = value
-    #         elif field == "password":
-    #             self._validate_password(value, update_data.get("password_confirm"))
-    #             update_dict["password"] = hash_password(value)
-    #         elif field in {"phone", "school"}:
-    #             update_dict[field] = value
-    #         elif field == "grade":
-    #             update_dict["grade"] = int(value)
-    #     return update_dict
-    #
-    # async def _validate_email(self, session, email):
-    #     if not self._validate_email_format(email):
-    #         raise HTTPException(status_code=400, detail="유효한 이메일 형식이 아닙니다.")
-    #     existing_email_user = await self.user_repo.get_user_by_email(session, email)
-    #     if existing_email_user:
-    #         raise HTTPException(status_code=400, detail="이미 사용 중인 이메일입니다.")
+    #         logger.error(f"Error fetching profile for user_id={user_id}: {e}")
+    #         raise HTTPException(status_code=500, detail="프로필 정보를 가져오는 중 오류가 발생했습니다.")

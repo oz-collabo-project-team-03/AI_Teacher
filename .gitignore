@@ -17,3 +17,4 @@ migrations/versions/*
 **/._.DS_Store
 
 .python-version
+.docker-compose.yaml

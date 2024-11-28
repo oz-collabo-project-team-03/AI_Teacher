@@ -51,17 +51,24 @@ def decode_token(token: str, verify_exp: bool = True) -> dict:
 
 def verify_access_token(token: str) -> dict:
     try:
+        logger.info(f"Verifying token: {token}")
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        logger.info(f"Decoded payload: {payload}")
         exp_timestamp = payload.get("exp")
         if exp_timestamp:
             exp_time = datetime.fromtimestamp(exp_timestamp)
             if exp_time < datetime.now():
+                logger.error("Token has expired.")
                 raise HTTPException(status_code=401, detail="Access Token이 만료되었습니다.")
 
         return payload
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Access Token이 만료되었습니다.")
+        logger.error("Expired token.")
+        raise HTTPException(status_code=401, detail="Token has expired.")
     except jwt.DecodeError as e:
-        raise HTTPException(status_code=400, detail=f"JWT 디코드 오류: {str(e)}")
+        logger.error(f"Decode error: {e}")
+        logger.debug(f"Token causing issue: {token}")
+        raise HTTPException(status_code=400, detail="Invalid token.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Access Token 검증 중 오류가 발생했습니다: {str(e)}")
+        logger.error(f"Unknown error: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
