@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.utils.dependency import get_current_user, get_session
 from src.app.v1.comment.schema.requestDto import CommentCreateRequest
-from src.app.v1.comment.schema.responseDto import CommentListResponse, CommentResponse, CommentCreateResponse
+from src.app.v1.comment.schema.responseDto import (
+    CommentCreateResponse,
+    CommentListResponse,
+    CommentResponse,
+)
 from src.app.v1.comment.service.comment_service import CommentService
 
 router = APIRouter(prefix="/comments", tags=["Comments"])
@@ -27,7 +30,6 @@ async def create_comment(
             content=payload.content,
             tag_nicknames=payload.tags,
             parent_comment_id=payload.parent_comment_id,
-
         )
         # 부모 댓글의 대댓글 개수 확인
         recomment_count = 0

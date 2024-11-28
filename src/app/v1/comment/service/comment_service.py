@@ -9,7 +9,6 @@ from src.app.v1.comment.entity.comment import Comment
 from src.app.v1.comment.entity.comment_tag import CommentTag
 
 
-
 class CommentService:
     async def create_comment_with_tags(
         self, session: AsyncSession, post_id: int, author_id: int, content: str, tag_nicknames: list[str] | None, parent_comment_id: int | None
@@ -61,15 +60,11 @@ class CommentService:
         ChildComment = aliased(Comment)
 
         # 부모 댓글 가져오기
-        parent_comment_query = select(
-            ParentComment,
-            func.count(ChildComment.id).label("child_count")
-        ).outerjoin(
-            ChildComment, ChildComment.parent_comment_id == ParentComment.id
-        ).where(
-            ParentComment.post_id == post_id, ParentComment.parent_comment_id == None
-        ).group_by(
-            ParentComment.id
+        parent_comment_query = (
+            select(ParentComment, func.count(ChildComment.id).label("child_count"))
+            .outerjoin(ChildComment, ChildComment.parent_comment_id == ParentComment.id)
+            .where(ParentComment.post_id == post_id, ParentComment.parent_comment_id == None)
+            .group_by(ParentComment.id)
         )
 
         parent_comments_result = await session.execute(parent_comment_query)
@@ -109,22 +104,25 @@ class CommentService:
                     "created_at": child.created_at,
                     "parent_comment_id": child.parent_comment_id,
                 }
-                for child in child_comments if child.parent_comment_id == parent_comment.id
+                for child in child_comments
+                if child.parent_comment_id == parent_comment.id
             ]
 
             # 부모 댓글 데이터 구조화
-            parent_comments_with_children.append({
-                "comment_id": parent_comment.id,
-                "post_id": parent_comment.post_id,
-                "author_id": parent_comment.author_id,
-                "author_nickname": tag_map.get(parent_comment.author_id, "Anonymous"),
-                "content": parent_comment.content,
-                "tags": [],
-                "created_at": parent_comment.created_at,
-                "parent_comment_id": None,
-                "recomment_count": child_count,
-                "children": child_comments_for_parent,
-            })
+            parent_comments_with_children.append(
+                {
+                    "comment_id": parent_comment.id,
+                    "post_id": parent_comment.post_id,
+                    "author_id": parent_comment.author_id,
+                    "author_nickname": tag_map.get(parent_comment.author_id, "Anonymous"),
+                    "content": parent_comment.content,
+                    "tags": [],
+                    "created_at": parent_comment.created_at,
+                    "parent_comment_id": None,
+                    "recomment_count": child_count,
+                    "children": child_comments_for_parent,
+                }
+            )
 
         return parent_comments_with_children
 

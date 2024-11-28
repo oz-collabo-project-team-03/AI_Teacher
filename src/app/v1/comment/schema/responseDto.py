@@ -4,7 +4,6 @@ from typing import List
 from pydantic import BaseModel
 
 
-
 class CommentCreateResponse(BaseModel):
     comment_id: int
     post_id: int
@@ -28,6 +27,7 @@ class CommentResponse(BaseModel):
     parent_comment_id: int | None = None
     recomment_count: int = 0
     children: List["CommentResponse"] = []
+
 
 class CommentListResponse(BaseModel):
     comments: List[CommentResponse]
