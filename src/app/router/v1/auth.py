@@ -1,3 +1,4 @@
+import logging
 from typing import Union
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, Response
@@ -6,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.app.common.utils.dependency import get_current_user, get_session
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.user.schema.requestDto import (
+    CheckingPasswordRequest,
     EmailRequest,
     EmailVerifyRequest,
     LoginRequest,
@@ -13,6 +15,7 @@ from src.app.v1.user.schema.requestDto import (
     StudentRegisterRequest,
     TeacherRegisterRequest,
     UpdatePasswordRequest,
+    UpdateUserInfoRequest,
 )
 from src.app.v1.user.schema.responseDto import (
     AccessTokenResponse,
@@ -23,6 +26,9 @@ from src.app.v1.user.schema.responseDto import (
     UserInfoResponse,
 )
 from src.app.v1.user.service.user_service import UserService
+
+logger = logging.getLogger(__name__)
+
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 user_repo = UserRepository()
@@ -82,21 +88,39 @@ async def find_email_by_phone(payload: PhoneRequest, session: AsyncSession = Dep
     return await user_service.find_email_by_phone(phone=payload.phone, session=session)
 
 
-@router.post("/verify/password", response_model=TempPasswordResponse)
-async def verify_password(
+@router.post("/reset/password", response_model=TempPasswordResponse)
+async def reset_password(
     payload: UpdatePasswordRequest,
     session: AsyncSession = Depends(get_session),
 ):
-    return await user_service.reset_password_service(email=payload.email, session=session)
+    return await user_service.reset_password(email=payload.email, session=session)
 
 
-# #
-# #
-# # # 유저 정보 업데이트
-# # @router.put("/update/info", response_model=MessageResponse)
-# # async def update_user_info(
-# #     payload: UpdateUserInfoRequest,
-# #     session: AsyncSession = Depends(get_session),
-# #     current_user: dict = Depends(get_current_user),
-# # ):
-# #     return await user_service.update_user_info(session=session, token=current_user["access_token"], update_data=payload.dict())
+# 회원정보 변경 전 비밀번호 확인
+@router.post("/verify/password", response_model=MessageResponse)
+async def verify_password(
+    payload: CheckingPasswordRequest,
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    return await user_service.checking_password(
+        user_id=current_user["user_id"],
+        password=payload.password,
+        session=session,
+    )
+
+
+@router.patch("/update/info", response_model=MessageResponse)
+async def update_user_info(
+    payload: UpdateUserInfoRequest,
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    logger.info(f"요청 데이터: {payload.dict(exclude_unset=True)}")
+    logger.info(f"현재 사용자: {current_user}")
+    return await user_service.update_user_info(
+        user_id=current_user["user_id"],
+        role=current_user["role"],
+        update_data=payload.dict(exclude_unset=True),
+        session=session,
+    )

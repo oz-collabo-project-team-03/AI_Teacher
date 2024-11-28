@@ -64,16 +64,17 @@ class UpdatePasswordRequest(BaseModel):
     email: EmailStr
 
 
+class CheckingPasswordRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    password: str
+
+
 class UpdateUserInfoRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    email: EmailStr | None
-    password: str | None = Field(None, min_length=10, max_length=20, description="10~20자리의 영문+숫자 조합")
-
-    # class UpdateUserInfoRequest(BaseModel):
-    #     model_config = ConfigDict(from_attributes=True)
-    #     email: EmailStr
-    #     password: str = Field(None, min_length=10, max_length=20, description="10~20자리의 영문+숫자 조합")
-    #     password_confirm: str
-    #     phone: str
-    #     school: str
-    #     grade: int
+    role: str
+    email: EmailStr | None = None
+    password: str | None = None
+    password_confirm: str | None = None
+    phone: str | None = None
+    school: str | None = None  # 학생 전용
+    grade: int | None = None  # 학생 전

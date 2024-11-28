@@ -19,6 +19,7 @@ class User(Base):
     social_provider: Mapped[SocialProvider | None] = mapped_column(
         Enum(SocialProvider, name="social_provider_enum", create_type=False), nullable=True
     )
+    first_login: Mapped[bool] = mapped_column(Boolean, default=True)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role_enum", create_type=False), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     deactivated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -33,3 +34,4 @@ class User(Base):
 
     # one-to-many
     participant = relationship("Participant", back_populates="user")
+    posts = relationship("Post", backref="author", cascade="all, delete-orphan", lazy="select")
