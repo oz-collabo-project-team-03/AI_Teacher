@@ -1,18 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.app.common.models.tag import Tag
 from src.app.common.utils.dependency import get_current_user, get_session
 from src.app.v1.comment.schema.requestDto import CommentCreateRequest
-from src.app.v1.comment.schema.responseDto import CommentListResponse, CommentResponse
+from src.app.v1.comment.schema.responseDto import (
+    CommentCreateResponse,
+    CommentListResponse,
+    CommentResponse,
+)
 from src.app.v1.comment.service.comment_service import CommentService
 
 router = APIRouter(prefix="/comments", tags=["Comments"])
 comment_service = CommentService()
 
 
-@router.post("/write/{post_id}", response_model=CommentResponse)
+@router.post("/write/{post_id}", response_model=CommentCreateResponse)
 async def create_comment(
     post_id: int,
     payload: CommentCreateRequest,
@@ -27,7 +29,12 @@ async def create_comment(
             author_id=int(current_user["user_id"]),
             content=payload.content,
             tag_nicknames=payload.tags,
+            parent_comment_id=payload.parent_comment_id,
         )
+        # 부모 댓글의 대댓글 개수 확인
+        recomment_count = 0
+        if payload.parent_comment_id:
+            recomment_count = await comment_service.get_recomment_count(session, payload.parent_comment_id)
 
         # 닉네임 조회
         author_nickname = await comment_service.get_user_nickname(session, int(current_user["user_id"]))
@@ -40,6 +47,8 @@ async def create_comment(
             content=comment.content,
             created_at=comment.created_at,
             tags=payload.tags or [],
+            parent_comment_id=comment.parent_comment_id,
+            recomment_count=recomment_count,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
