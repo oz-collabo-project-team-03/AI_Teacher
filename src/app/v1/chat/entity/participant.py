@@ -12,4 +12,3 @@ class Participant(Base):
     room_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("rooms.id"), nullable=False)
     user = relationship("User", back_populates="participant")
     room = relationship("Room", back_populates="participant")
-    # messages = relationship("Message", back_populates="participants")
