@@ -24,7 +24,10 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+):
+
     try:
         logger.info("Starting authentication process...")
         if not token:

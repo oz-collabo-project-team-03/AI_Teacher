@@ -78,3 +78,9 @@ class UpdateUserInfoRequest(BaseModel):
     phone: str | None = None
     school: str | None = None  # 학생 전용
     grade: int | None = None  # 학생 전
+
+
+class StudyGroupRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    teacher_id: int
+    name: str

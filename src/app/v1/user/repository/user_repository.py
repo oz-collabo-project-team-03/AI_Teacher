@@ -18,6 +18,7 @@ from src.app.common.utils.verify_password import (
 from src.app.v1.post.entity.post import Post
 from src.app.v1.user.entity.organization import Organization
 from src.app.v1.user.entity.student import Student
+from src.app.v1.user.entity.study_group import StudyGroup
 from src.app.v1.user.entity.teacher import Teacher
 from src.app.v1.user.entity.user import User
 
@@ -178,6 +179,65 @@ class UserRepository:
                 logger.error(f"비밀번호 업데이트 중 오류 발생: {e}")
                 raise
 
+    # 모든 선생님 (이름, 조직이름, 조직타입, 포지션) 조회
+    async def get_all_teachers_info(self, session: AsyncSession) -> list[dict]:
+        try:
+            query = (
+                select(
+                    Teacher.id.label("teacher_id"),
+                    Tag.nickname.label("name"),
+                    Organization.name.label("organization_name"),
+                    Organization.type.label("organization_type"),
+                    Organization.position.label("position"),
+                )
+                .join(User, User.id == Teacher.user_id)  #
+                .join(Organization, Organization.teacher_id == Teacher.id, isouter=True)
+                .join(Tag, Tag.user_id == User.id, isouter=True)
+                .where(User.role == UserRole.TEACHER)
+            )
+
+            result = await session.execute(query)
+            teachers = result.fetchall()
+
+            return [
+                {
+                    "teacher_id": teacher.teacher_id,
+                    "name": teacher.name,
+                    "organization_name": teacher.organization_name,
+                    "organization_type": teacher.organization_type,
+                    "position": teacher.position,
+                }
+                for teacher in teachers
+            ]
+        except SQLAlchemyError as e:
+            raise RuntimeError(f"교사 정보 조회 중 데이터베이스 오류: {e}")
+
+    # 학생 최초 로그인 시 선생님 조회
+    async def get_student_id(self, session: AsyncSession, user_id: int) -> int | None:
+        try:
+            query = select(Student.id).where(Student.user_id == user_id)
+            result = await session.execute(query)
+            return result.scalar()
+        except SQLAlchemyError as e:
+            raise RuntimeError(f"Database error while fetching student ID: {e}")
+
+    async def get_teacher_by_id_and_name(self, session: AsyncSession, teacher_id: int, name: str) -> int | None:
+        try:
+            query = select(Teacher.id).join(Tag, Tag.user_id == Teacher.user_id).where(Teacher.id == teacher_id).where(Tag.nickname == name)
+            result = await session.execute(query)
+            return result.scalar()
+        except SQLAlchemyError as e:
+            raise RuntimeError(f"Database error while fetching teacher: {e}")
+
+    async def create_study_group(self, session: AsyncSession, student_id: int, teacher_id: int):
+        try:
+            new_group = StudyGroup(student_id=student_id, teacher_id=teacher_id)
+            session.add(new_group)
+            await session.commit()
+            return new_group
+        except SQLAlchemyError as e:
+            raise RuntimeError(f"Database error while creating study group: {e}")
+
     # 교사 회원정보 조회 -> 이메일, 패스워드, 전화번호
     async def get_teacher_info(self, session: AsyncSession, user_id: int) -> dict:
         try:
@@ -263,6 +323,9 @@ class UserRepository:
                 raise HTTPException(status_code=500, detail="학생 정보 업데이트 중 데이터베이스 오류가 발생했습니다.")
 
 
+#
+#
+#
 #     storage_service = NCPStorageService()
 #     # 프로필 조회
 #     async def get_student_profile(self, session: AsyncSession, user_id: int) -> dict:
