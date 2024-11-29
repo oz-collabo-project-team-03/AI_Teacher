@@ -15,5 +15,4 @@ async def websocket(
     mongo: AIOEngine = Depends(mongo_db),
     current_user: dict = Depends(get_current_user),
 ):
-    try:
-        user = 
+    pass

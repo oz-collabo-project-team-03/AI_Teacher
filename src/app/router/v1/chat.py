@@ -8,11 +8,11 @@ from src.app.v1.chat.service.room_service import RoomService
 from src.app.v1.chat.entity.message import Message
 from src.app.common.factory import get_room_service, mongo_db
 
-router = APIRouter(prefix="/chat", tags=["chats"])
+router = APIRouter(prefix="/chat", tags=["Chats"])
 
 
 # Create Room
-@router.post("/create/room", response_model=RoomCreateResponse)
+@router.post("/room", response_model=RoomCreateResponse)
 async def create_room(
     request: RoomCreateRequest,
     room_service: RoomService = Depends(get_room_service),
@@ -53,7 +53,7 @@ async def ask_help(
 
 
 # Get Room
-@router.get("{room_id}/messages")
+@router.get("/{room_id}/messages")
 async def get_room_messages(
     room_id: int,
     mongo: AIOEngine = Depends(mongo_db),
