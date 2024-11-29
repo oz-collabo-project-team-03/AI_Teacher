@@ -1,9 +1,10 @@
 import logging
 from typing import Union
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.app.common.utils.consts import UserRole
 from src.app.common.utils.dependency import get_current_user, get_session
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.user.schema.requestDto import (
@@ -13,6 +14,7 @@ from src.app.v1.user.schema.requestDto import (
     LoginRequest,
     PhoneRequest,
     StudentRegisterRequest,
+    StudyGroupRequest,
     TeacherRegisterRequest,
     UpdatePasswordRequest,
     UpdateUserInfoRequest,
@@ -21,6 +23,7 @@ from src.app.v1.user.schema.responseDto import (
     AccessTokenResponse,
     EmailResponse,
     MessageResponse,
+    TeachersResponse,
     TempPasswordResponse,
     TokenResponse,
     UserInfoResponse,
@@ -123,4 +126,31 @@ async def update_user_info(
         role=current_user["role"],
         update_data=payload.dict(exclude_unset=True),
         session=session,
+    )
+
+
+# 모든 선생님 정보 조회
+@router.get("/teachers", response_model=list[TeachersResponse])
+async def get_all_teachers(
+    session: AsyncSession = Depends(get_session),
+    current_user=Depends(get_current_user),
+):
+    logger.info(f"Current User: {current_user}")
+    if current_user["role"] != UserRole.STUDENT:
+        raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
+    return await user_service.get_all_teachers_info(session)
+
+
+# 최초 로그인 시 선생님 선택 -> 스터디 그룹 형성
+@router.post("/study/groups", response_model=MessageResponse)
+async def create_study_group(
+    study_group: StudyGroupRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user=Depends(get_current_user),
+):
+    return await user_service.create_study_group(
+        session=session,
+        current_user=current_user,
+        teacher_id=study_group.teacher_id,
+        teacher_name=study_group.name,
     )

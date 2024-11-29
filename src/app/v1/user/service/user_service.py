@@ -11,6 +11,7 @@ import jwt
 from email_validator import EmailNotValidError, validate_email
 from fastapi import BackgroundTasks, HTTPException, Response
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.utils.consts import UserRole
@@ -428,6 +429,54 @@ class UserService:
         except Exception as e:
             logger.error(f"사용자 정보 업데이트 중 서버 오류 발생: {str(e)}")
             raise HTTPException(status_code=500, detail="서버 오류: 사용자 정보 업데이트 실패")
+
+    async def get_all_teachers_info(self, session: AsyncSession) -> list[dict]:
+        try:
+            teachers = await self.user_repo.get_all_teachers_info(session)
+            if not teachers:
+                logger.warning("교사 정보가 존재하지 않습니다.")
+                raise HTTPException(status_code=404, detail="교사 정보가 존재하지 않습니다.")
+            return teachers
+        except SQLAlchemyError as e:
+            logger.error(f"교사 정보 조회 중 오류 발생: {e}")
+            raise HTTPException(status_code=500, detail="교사 정보 조회 중 서버 오류가 발생했습니다.")
+        except Exception as e:
+            logger.error(f"예상치 못한 오류 발생: {e}")
+            raise HTTPException(status_code=500, detail="예상치 못한 오류가 발생했습니다.")
+
+    # 학생 최초 로그인 시 교사 선택
+    async def create_study_group(self, session: AsyncSession, current_user: dict, teacher_id: int, teacher_name: str) -> dict:
+        logger.info(f"Creating study group for user_id={current_user['user_id']}")
+
+        if current_user["role"].upper() != "STUDENT":
+            logger.warning(f"Unauthorized role: {current_user['role']}")
+            raise HTTPException(status_code=403, detail="학생만 스터디 그룹을 생성할 수 있습니다.")
+
+        try:
+            student_id = await self.user_repo.get_student_id(session, current_user["user_id"])
+            if not student_id:
+                logger.warning(f"No student found for user_id={current_user['user_id']}")
+                raise HTTPException(status_code=404, detail="학생 정보를 찾을 수 없습니다.")
+        except Exception as e:
+            logger.error(f"Error fetching student ID: {e}")
+            raise HTTPException(status_code=500, detail="학생 정보 조회 중 오류가 발생했습니다.")
+
+        try:
+            fetched_teacher_id = await self.user_repo.get_teacher_by_id_and_name(session, teacher_id, teacher_name)
+            if not fetched_teacher_id:
+                logger.warning(f"Teacher not found or name mismatch: teacher_id={teacher_id}, name={teacher_name}")
+                raise HTTPException(status_code=404, detail="선생님 정보가 일치하지 않습니다.")
+        except Exception as e:
+            logger.error(f"Error fetching teacher: {e}")
+            raise HTTPException(status_code=500, detail="선생님 정보 조회 중 오류가 발생했습니다.")
+
+        try:
+            new_group = await self.user_repo.create_study_group(session, student_id, teacher_id)
+            logger.info(f"Study group created: {new_group}")
+            return {"message": "study group이 성공적으로 생성되었습니다."}
+        except Exception as e:
+            logger.error(f"Error creating study group: {e}")
+            raise HTTPException(status_code=500, detail="스터디 그룹 생성 중 오류가 발생했습니다.")
 
     # async def get_user_profile(self, session: AsyncSession, user_id: int) -> dict:
     #     try:

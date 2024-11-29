@@ -88,3 +88,18 @@ class TeacherProfileResponse(BaseModel):
 
 
 ProfileResponse = Union[StudentProfileResponse, TeacherProfileResponse]
+
+
+class CurrentUser(BaseModel):
+    access_token: str
+    user_id: int
+    role: str
+
+
+class TeachersResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    teacher_id: int
+    name: str
+    organization_name: str
+    organization_type: str
+    position: str
