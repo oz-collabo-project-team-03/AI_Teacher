@@ -102,6 +102,7 @@ class PostRepository:
 
             response = {
                 "nickname": user.tag.nickname if user.tag else None,
+                "user_id": user.external_id,
                 "profile_image": user.profile_image,
                 "career_aspiration": student.career_aspiration,
                 "interest": student.interest,
@@ -330,6 +331,7 @@ class PostRepository:
 
                 post_data = {
                     "nickname": tag.nickname,
+                    "user_id": user.external_id,
                     "profile_image": user.profile_image,
                     "career_aspiration": student.career_aspiration,
                     "interest": student.interest,
@@ -422,6 +424,7 @@ class PostRepository:
 
                 post_data = {
                     "nickname": tag.nickname,
+                    "user_id": user.external_id,
                     "profile_image": user.profile_image,
                     "career_aspiration": student.career_aspiration,
                     "interest": student.interest,
