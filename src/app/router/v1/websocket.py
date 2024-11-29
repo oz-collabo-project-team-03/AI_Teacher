@@ -1,9 +1,19 @@
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, WebSocket, Depends
+from src.app.common.utils.dependency import get_current_user
+from odmantic import AIOEngine
 
-router = APIRouter(prefix="ws", tags=["Websocket"])
+from src.app.common.factory import mongo_db
+
+router = APIRouter(tags=["Websocket"])
 
 
 # Websocket
-@router.websocket("/")
-async def websocket(websocket: WebSocket):
-    pass
+@router.websocket("/ws/{room_id}")
+async def websocket(
+    websocket: WebSocket,
+    room_id: int,
+    mongo: AIOEngine = Depends(mongo_db),
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        user = 
