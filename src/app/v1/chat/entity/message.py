@@ -1,4 +1,4 @@
-from src.app.common.utils.timezone import get_kst_now
+# from src.app.common.utils.timezone import get_kst_now
 from datetime import datetime
 from bson import ObjectId
 from odmantic import Model, Field
@@ -7,12 +7,14 @@ from odmantic import Model, Field
 # MongoDB Collection
 class Message(Model):
     id: ObjectId = Field(default_factory=ObjectId, primary_field=True)
+    room_id: int
+    title: str
     sender_id: int
-    type: str
+    message_type: str
     room_id: int
     content: str
     # FIXME: 현재 시간 적용
-    timestamp: datetime = Field(default_factory=get_kst_now)
+    timestamp: datetime
 
     model_config = {
         "collection": "chat",
