@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 
 from src.app.v1.chat.repository.room_repository import RoomRepository
+from odmantic import AIOEngine
 from src.app.v1.chat.schema.room_request import RoomCreateRequest
 from src.app.v1.chat.schema.room_response import RoomCreateResponse
 
@@ -29,6 +30,13 @@ class RoomService:
         participants.append({"student_id": user_list[0]})
         participants.append({"teacher_id": user_list[1]})
 
-        response = RoomCreateResponse(room_id=new_room.id, title=new_room.title, help_checked=new_room.help_checked, participants=participants)
+        return RoomCreateResponse(room_id=new_room.id, title=new_room.title, help_checked=new_room.help_checked, participants=participants)
 
-        return response
+    async def delete_room(self, room_id: int, user_id: str):
+        pass
+
+    async def ask_help(self, room_id: int, user_id: str):
+        pass
+
+    async def get_room_messages(self, mongo: AIOEngine, room_id: int, user_id: str):
+        pass

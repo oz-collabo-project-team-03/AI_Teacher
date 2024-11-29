@@ -98,10 +98,15 @@ class PostRepository:
                 teacher_result = await session.execute(teacher_query)
                 teacher = teacher_result.unique().scalar_one_or_none()
                 if teacher:
-                    teacher_info = {"nickname": teacher.tag.nickname if teacher.tag else None, "profile_image": teacher.profile_image}
+                    teacher_info = {
+                        "nickname": teacher.tag.nickname if teacher.tag else None,
+                        "profile_image": teacher.profile_image,
+                        "user_id": teacher.external_id,
+                    }
 
             response = {
                 "nickname": user.tag.nickname if user.tag else None,
+                "user_id": user.external_id,
                 "profile_image": user.profile_image,
                 "career_aspiration": student.career_aspiration,
                 "interest": student.interest,
@@ -316,7 +321,7 @@ class PostRepository:
                 teacher_info = None
                 if post.is_with_teacher:
                     teacher_query = (
-                        select(User.profile_image, Tag.nickname)
+                        select(User.profile_image, Tag.nickname, User.external_id)
                         .join(Teacher, User.id == Teacher.user_id)
                         .join(Tag, User.id == Tag.user_id)
                         .where(User.role == UserRole.TEACHER)
@@ -325,11 +330,16 @@ class PostRepository:
                     teacher_result = await session.execute(teacher_query)
                     teacher_row = teacher_result.first()
                     if teacher_row:
-                        profile_image, nickname = teacher_row
-                        teacher_info = {"nickname": nickname, "profile_image": profile_image}
+                        profile_image, nickname, teacher_external_id = teacher_row
+                        teacher_info = {
+                            "nickname": nickname,
+                            "user_id": teacher_external_id,
+                            "profile_image": profile_image,
+                        }
 
                 post_data = {
                     "nickname": tag.nickname,
+                    "user_id": user.external_id,
                     "profile_image": user.profile_image,
                     "career_aspiration": student.career_aspiration,
                     "interest": student.interest,
@@ -366,7 +376,15 @@ class PostRepository:
 
         async with SessionLocal() as session:
             # 전체 게시글 수 조회 (해당 사용자의)
-            total_count_query = select(func.count(Post.id)).where(Post.author_id == int(user_id))
+            user_query = select(User.id).where(User.external_id == user_id)
+            user_result = await session.execute(user_query)
+            internal_user_id = user_result.scalar_one_or_none()
+
+            if not internal_user_id:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+            # 전체 게시글 수 조회 (해당 사용자의)
+            total_count_query = select(func.count(Post.id)).where(Post.author_id == internal_user_id)
             total_count_result = await session.execute(total_count_query)
             total_count = total_count_result.scalar()
 
@@ -376,7 +394,7 @@ class PostRepository:
                 .join(User, Post.author_id == User.id)
                 .join(Student, User.id == Student.user_id)
                 .join(Tag, User.id == Tag.user_id)
-                .where(Post.author_id == int(user_id))  # 사용자의 게시글만 필터링
+                .where(Post.author_id == internal_user_id)  # internal id로 필터링
                 .order_by(Post.created_at.desc())
                 .offset((page - 1) * PAGE_SIZE)
                 .limit(PAGE_SIZE)
@@ -408,7 +426,7 @@ class PostRepository:
                 teacher_info = None
                 if post.is_with_teacher:
                     teacher_query = (
-                        select(User.profile_image, Tag.nickname)
+                        select(User.profile_image, Tag.nickname, User.external_id)
                         .join(Teacher, User.id == Teacher.user_id)
                         .join(Tag, User.id == Tag.user_id)
                         .where(User.role == UserRole.TEACHER)
@@ -417,11 +435,16 @@ class PostRepository:
                     teacher_result = await session.execute(teacher_query)
                     teacher_row = teacher_result.first()
                     if teacher_row:
-                        profile_image, nickname = teacher_row
-                        teacher_info = {"nickname": nickname, "profile_image": profile_image}
+                        profile_image, nickname, teacher_external_id = teacher_row
+                        teacher_info = {
+                            "nickname": nickname,
+                            "user_id": teacher_external_id,
+                            "profile_image": profile_image,
+                        }
 
                 post_data = {
                     "nickname": tag.nickname,
+                    "user_id": user.external_id,
                     "profile_image": user.profile_image,
                     "career_aspiration": student.career_aspiration,
                     "interest": student.interest,

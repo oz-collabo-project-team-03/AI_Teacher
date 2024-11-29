@@ -23,6 +23,9 @@ requests = "2.32.3"
 aiosmtplib = "3.0.2"
 boto3 = "1.35.69"
 python-multipart = "0.0.17"
+odmantic = "1.0.2"
+motor = {extras = ["srv"], version = "3.6.0"}
+openai = "1.55.3"
 
 
 [tool.poetry.group.dev.dependencies]
