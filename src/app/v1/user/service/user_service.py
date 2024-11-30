@@ -46,6 +46,12 @@ from src.app.v1.user.schema.requestDto import (
     StudentRegisterRequest,
     TeacherRegisterRequest,
 )
+from src.app.v1.user.schema.responseDto import (
+    CommonProfileResponse,
+    PostResponse,
+    StudentProfileResponse,
+    TeacherProfileResponse,
+)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -115,7 +121,7 @@ class UserService:
             logger.info(f"Redis 조회 성공: Key={redis_key}, Value={stored_code}")
         except Exception as e:
             logger.error(f"Redis 조회 오류: {e}")
-            raise HTTPException(status_code=500, detail="인증 코드를 확인하는 중 문제가 발생했습니다.")
+            raise HTTPException(status_code=500, detail="Redis에서 인증 코드를 확인하는 중 문제가 발생했습니다.")
 
         if not stored_code:
             logger.warning(f"인증 코드 만료 또는 존재하지 않음: Key={redis_key}")
@@ -131,7 +137,7 @@ class UserService:
             logger.info(f"Redis 삭제 성공: Key={redis_key}")
         except Exception as e:
             logger.error(f"Redis 삭제 오류: {e}")
-            raise HTTPException(status_code=500, detail="인증 코드 삭제 중 문제가 발생했습니다.")
+            raise HTTPException(status_code=500, detail="Redis에서 인증 코드 삭제 중 문제가 발생했습니다.")
 
         return {"message": "이메일 인증이 완료되었습니다."}
 
@@ -143,7 +149,7 @@ class UserService:
             validation_result = validate_password_complexity(payload.password)
 
             if not validation_result:
-                raise HTTPException(status_code=400, detail="비밀번호는 10~20자의 영문(대소문자), 숫자, 특수문자가 포함되어야 합니다.")
+                raise HTTPException(status_code=400, detail="비밀번호는 영문(대소, 숫자, 특수문자 10~20자 이내 여야 합니다.")
 
             hashed_password = hash_password(payload.password)
 
@@ -163,7 +169,7 @@ class UserService:
             raise
         except Exception as e:
             logger.error(f"Error during user registration: {e}")
-            raise HTTPException(status_code=500, detail="회원가입 중 오류가 발생했습니다.")
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
     def _prepare_student_data(self, payload: StudentRegisterRequest, hashed_password: str) -> dict:
         return {
@@ -232,8 +238,9 @@ class UserService:
             await session.commit()
 
         return {
+            "id": user.id,
             "access_token": access_token,
-            "refresh_token": refresh_token,
+            "refresh_token": refresh_token,  # 테스트 용
             "token_type": "Bearer",
             "expires_in": 900,
             "role": role,
@@ -258,9 +265,9 @@ class UserService:
             redis_key = get_redis_key_refresh_token(user_id)
             stored_refresh_token = await get_from_redis(redis_key)
             if not stored_refresh_token:
-                raise HTTPException(status_code=401, detail="Refresh Token이 만료되었거나 존재하지 않습니다.")
+                raise HTTPException(status_code=401, detail="Refresh Token이 만료되었습니다.")
             if stored_refresh_token.strip() != refresh_token.strip():
-                raise HTTPException(status_code=401, detail="Refresh Token이 일치하지 않습니다.")
+                raise HTTPException(status_code=401, detail="Refresh Token이 유효하지 않습니다.")
 
             # Access Token 생성
             role = str(user.role) if not isinstance(user.role, str) else user.role
@@ -285,16 +292,16 @@ class UserService:
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Refresh Token이 만료되었습니다.")
         except jwt.InvalidTokenError:
-            raise HTTPException(status_code=401, detail="유효하지 않은 Refresh Token입니다.")
+            raise HTTPException(status_code=401, detail="Refresh Token 유효하지 않습니다.")
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
     async def logout_user(self, access_token: str, response: Response):
         try:
             payload = verify_access_token(access_token)
             expiry = payload.get("exp")
             if expiry is None:
-                raise HTTPException(status_code=400, detail="Access Token에 exp 필드가 없습니다.")
+                raise HTTPException(status_code=400, detail="Access Token에 형식이 잘 못 되었습니다..")
 
             # 현재 KST 시간과 비교
             remaining_time = expiry - int(datetime.now().timestamp())
@@ -304,7 +311,7 @@ class UserService:
             jti = payload.get("jti")
             user_id = payload.get("sub")
             if not jti or not user_id:
-                raise HTTPException(status_code=400, detail="Access Token에 JTI 또는 사용자 ID 정보가 없습니다.")
+                raise HTTPException(status_code=400, detail="Access Token에 형식이 잘 못 되었습니다.")
 
             # Redis에서 Refresh Token 삭제
             redis_key = get_redis_key_refresh_token(user_id)
@@ -321,11 +328,11 @@ class UserService:
             raise HTTPException(status_code=401, detail="Access Token이 만료되었습니다.")
         except Exception as e:
             logger.error(f"로그아웃 처리 중 오류 발생: {e}")
-            raise HTTPException(status_code=500, detail="로그아웃 처리 중 서버 오류가 발생했습니다.")
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
     async def find_email_by_phone(self, phone: str, session: AsyncSession) -> dict:
         if not phone:
-            raise HTTPException(status_code=400, detail="핸드폰 번호를 입력해 주세요.")
+            raise HTTPException(status_code=400, detail="유효하지 않은 전화번호입니다.")
         try:
             email = await self.user_repo.get_user_email_by_phone(session, phone)
 
@@ -341,7 +348,7 @@ class UserService:
 
         except Exception as e:
             logger.error(f"예기치 못한 오류 발생: {e}")
-            raise HTTPException(status_code=500, detail="이메일 검색 처리 중 서버 오류가 발생했습니다.")
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
     def _mask_email(self, email: str) -> str:
         try:
@@ -356,7 +363,7 @@ class UserService:
             temp_password = generate_temp_password()
 
             if not validate_temp_password_complexity(temp_password):
-                raise HTTPException(status_code=500, detail="임시 비밀번호 생성 실패: 규칙 위반")
+                raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
             await self.user_repo.reset_user_password(session, email, temp_password)
 
@@ -369,7 +376,7 @@ class UserService:
 
         except Exception as e:
             logger.error(f"임시 비밀번호 발급 중 오류 발생: {e}")
-            raise HTTPException(status_code=500, detail="임시 비밀번호 발급 중 오류가 발생했습니다.")
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
     async def checking_password(self, user_id: int, password: str, session: AsyncSession) -> dict:
         try:
@@ -388,7 +395,7 @@ class UserService:
             raise
 
         except Exception as e:
-            raise HTTPException(status_code=500, detail="서버 오류: 비밀번호 검증 실패")
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
     async def update_user_info(self, user_id: int, role: str, update_data: dict, session: AsyncSession) -> dict:
         try:
@@ -439,10 +446,11 @@ class UserService:
             return teachers
         except SQLAlchemyError as e:
             logger.error(f"교사 정보 조회 중 오류 발생: {e}")
-            raise HTTPException(status_code=500, detail="교사 정보 조회 중 서버 오류가 발생했습니다.")
+
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
         except Exception as e:
             logger.error(f"예상치 못한 오류 발생: {e}")
-            raise HTTPException(status_code=500, detail="예상치 못한 오류가 발생했습니다.")
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
     # 학생 최초 로그인 시 교사 선택
     async def create_study_group(self, session: AsyncSession, current_user: dict, teacher_id: int, teacher_name: str) -> dict:
@@ -459,16 +467,16 @@ class UserService:
                 raise HTTPException(status_code=404, detail="학생 정보를 찾을 수 없습니다.")
         except Exception as e:
             logger.error(f"Error fetching student ID: {e}")
-            raise HTTPException(status_code=500, detail="학생 정보 조회 중 오류가 발생했습니다.")
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
         try:
             fetched_teacher_id = await self.user_repo.get_teacher_by_id_and_name(session, teacher_id, teacher_name)
             if not fetched_teacher_id:
                 logger.warning(f"Teacher not found or name mismatch: teacher_id={teacher_id}, name={teacher_name}")
-                raise HTTPException(status_code=404, detail="선생님 정보가 일치하지 않습니다.")
+                raise HTTPException(status_code=404, detail="선생님 정보를 찾을 수 없습니다.")
         except Exception as e:
             logger.error(f"Error fetching teacher: {e}")
-            raise HTTPException(status_code=500, detail="선생님 정보 조회 중 오류가 발생했습니다.")
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
         try:
             new_group = await self.user_repo.create_study_group(session, student_id, teacher_id)
@@ -476,24 +484,131 @@ class UserService:
             return {"message": "study group이 성공적으로 생성되었습니다."}
         except Exception as e:
             logger.error(f"Error creating study group: {e}")
-            raise HTTPException(status_code=500, detail="스터디 그룹 생성 중 오류가 발생했습니다.")
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
-    # async def get_user_profile(self, session: AsyncSession, user_id: int) -> dict:
-    #     try:
-    #         user = await self.user_repo.get_user_by_id(session, user_id)
-    #         if not user:
-    #             logger.error(f"User not found: user_id={user_id}")
-    #             raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-    #
-    #         if user.role == UserRole.STUDENT:
-    #             return await self.user_repo.get_student_profile(session, user)
-    #
-    #         elif user.role == UserRole.TEACHER:
-    #             return await self.user_repo.get_teacher_profile(session, user)
-    #
-    #         else:
-    #             logger.error(f"Invalid role for user_id={user_id}")
-    #             raise HTTPException(status_code=400, detail="유효하지 않은 사용자 역할입니다.")
-    #     except Exception as e:
-    #         logger.error(f"Error fetching profile for user_id={user_id}: {e}")
-    #         raise HTTPException(status_code=500, detail="프로필 정보를 가져오는 중 오류가 발생했습니다.")
+    # 남이 내 프로필 조회
+
+    # 내가 내 프로필 조회
+    async def get_user_profile(self, user_id: int, role: str, session: AsyncSession):
+        try:
+            # 유저 정보 가져오기
+            user = await self.user_repo.get_user_with_profile(user_id, session)
+            if not user:
+                raise HTTPException(status_code=404, detail="사용자 정보를 찾을 수 없습니다.")
+
+            # 닉네임 확인
+            if not user.tag or not user.tag.nickname:
+                raise HTTPException(status_code=400, detail="사용자의 닉네임이 설정되지 않았습니다.")
+
+            # 게시물 정보 가져오기
+            posts = await self.user_repo.get_posts_by_user(user_id, session)
+            posts_data = [
+                PostResponse(
+                    post_id=post.external_id,
+                    post_image=post.images[0].image_path if post.images else None,
+                )
+                for post in posts
+            ]
+
+            # 공통 데이터 생성
+            common_data = CommonProfileResponse(
+                role=role,
+                id=user.id,
+                nickname=user.tag.nickname,
+                profile_image=user.profile_image,
+                post_count=len(posts_data),
+                like_count=sum(post.like_count for post in posts),
+                comment_count=sum(post.comment_count for post in posts),
+            )
+
+            logger.debug(f"Common data: {common_data}")
+            logger.debug(f"Posts data: {posts_data}")
+
+            # 학생 프로필 생성
+            if role == UserRole.STUDENT.value:
+                if not user.student:
+                    raise HTTPException(status_code=404, detail="학생 정보를 찾을 수 없습니다.")
+                student_profile = StudentProfileResponse(
+                    **common_data.dict(),
+                    school=user.student.school,
+                    grade=f"{user.student.grade}학년",
+                    career_aspiration=user.student.career_aspiration,
+                    interest=user.student.interest,
+                    description=user.student.description,
+                    posts=posts_data,
+                )
+                logger.debug(f"Student profile: {student_profile}")
+                return student_profile
+
+            # 교사 프로필 생성
+            elif role == UserRole.TEACHER.value:
+                if not user.teacher or not user.teacher.organization:
+                    raise HTTPException(status_code=404, detail="교사 정보를 찾을 수 없습니다.")
+                teacher_profile = TeacherProfileResponse(
+                    **common_data.dict(),
+                    organization_name=user.teacher.organization.name,
+                    organization_type=user.teacher.organization.type,
+                    position=user.teacher.organization.position,
+                    posts=posts_data,
+                )
+                logger.debug(f"Teacher profile: {teacher_profile}")
+                return teacher_profile
+
+            # 올바르지 않은 역할 처리
+            else:
+                raise HTTPException(status_code=400, detail="올바르지 않은 역할입니다.")
+
+        except Exception as e:
+            logger.error(f"Error fetching profile for user_id={user_id}: {e}")
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
+
+    # 학생 프로필 편집
+    async def update_student_profile(self, user_id: int, update_data: dict, session: AsyncSession) -> dict:
+        print(f"Entering update_student_profile for user_id={user_id}")
+        print(f"Update data: {update_data}")
+        try:
+            # 트랜잭션 시작
+            async with session.begin():
+                user = await self.user_repo.get_user_with_profile(user_id, session)
+                if not user or user.role != UserRole.STUDENT:
+                    print(f"Invalid role or user not found for user_id={user_id}")
+                    raise HTTPException(status_code=403, detail="학생만 프로필을 편집할 수 있습니다.")
+
+                # 업데이트 처리
+                updated = await self.user_repo.update_student_profile(user_id, update_data, session)
+                if not updated:
+                    print(f"Profile update failed for user_id={user_id}")
+                    raise HTTPException(status_code=400, detail="프로필 업데이트에 실패했습니다.")
+
+            print(f"Student profile updated successfully for user_id={user_id}")
+            return {"message": "학생 프로필 정보가 성공적으로 변경되었습니다."}
+        except SQLAlchemyError as e:
+            print(f"Database error during profile update for user_id={user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="데이터베이스 처리 중 오류가 발생했습니다.")
+        except Exception as e:
+            print(f"Unexpected error during profile update for user_id={user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="프로필 업데이트 중 알 수 없는 오류가 발생했습니다.")
+    # 교사 프로필 업데이트
+    async def update_teacher_profile(self, user_id: int, profile_data: dict, session: AsyncSession) -> dict:
+        try:
+            async with session.begin():
+                user = await self.user_repo.get_user_with_profile(user_id, session)
+                if not user or user.role != UserRole.TEACHER:
+                    print(f"Invalid role or user not found for user_id={user_id}")
+                    raise HTTPException(status_code=403, detail="선생님만 프로필을 편집할 수 있습니다.")
+
+
+                updated = await self.user_repo.update_teacher_profile(user_id, profile_data, session)
+                if not updated:
+                    print(f"Profile update failed for user_id={user_id}")
+                    raise HTTPException(status_code=400, detail="프로필 업데이트에 실패했습니다.")
+
+            print(f"Teacher profile updated successfully for user_id={user_id}")
+            return {"message": "선생님 프로필 정보가 성공적으로 변경되었습니다."}
+        except SQLAlchemyError as e:
+            print(f"Database error during profile update for user_id={user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="데이터베이스 처리 중 오류가 발생했습니다.")
+        except Exception as e:
+            print(f"Unexpected error during profile update for user_id={user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="프로필 업데이트 중 알 수 없는 오류가 발생했습니다.")
+

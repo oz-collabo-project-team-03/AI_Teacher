@@ -76,5 +76,5 @@ class NCPStorageService:
 
         return uploaded_urls
 
-    def get_s3_url(self, object_key: str) -> str:
-        return f"{self.endpoint_url}/{self.bucket_name}/{object_key}"
+    # def get_s3_url(self, object_key: str) -> str:
+    #     return f"{self.endpoint_url}/{self.bucket_name}/{object_key}"

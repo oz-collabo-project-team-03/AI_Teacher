@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from odmantic import AIOEngine
 from fastapi.responses import Response
+from odmantic import AIOEngine
+
+from src.app.common.factory import get_room_service, mongo_db
 from src.app.common.utils.dependency import get_current_user
+from src.app.v1.chat.entity.message import Message
 from src.app.v1.chat.schema.room_request import RoomCreateRequest
 from src.app.v1.chat.schema.room_response import RoomCreateResponse
 from src.app.v1.chat.service.room_service import RoomService
-from src.app.v1.chat.entity.message import Message
-from src.app.common.factory import get_room_service, mongo_db
 
 router = APIRouter(prefix="/chat", tags=["Chats"])
 

@@ -1,8 +1,9 @@
 import os
+from contextlib import asynccontextmanager
+
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 from odmantic import AIOEngine
-from contextlib import asynccontextmanager
 
 
 class MongoDB:
@@ -16,8 +17,8 @@ class MongoDB:
         self.mongo_max_connections = int(os.getenv("MONGO_MAX_CONNECTIONS", 10))
         self.mongo_min_connections = int(os.getenv("MONGO_MIN_CONNECTIONS", 1))
 
-        self.__client: AsyncIOMotorClient | None
-        self.__engine: AIOEngine | None
+        self.__client: AsyncIOMotorClient | None  # type: ignore
+        self.__engine: AIOEngine | None  # type: ignore
 
     @property
     def client(self) -> AsyncIOMotorClient | None:
@@ -36,7 +37,7 @@ class MongoDB:
             maxPoolSize=self.mongo_max_connections,
             minPoolSize=self.mongo_min_connections,
         )
-        self.__engine: AIOEngine | None = AIOEngine(client=self.__client, database=self.mongo_db_name)
+        self.__engine: AIOEngine | None = AIOEngine(client=self.__client, database=self.mongo_db_name)  # type: ignore
 
     async def close(self):
         """
@@ -44,8 +45,8 @@ class MongoDB:
         """
         if self.__client:
             self.__client.close()
-            self.__client: AsyncIOMotorClient | None = None
-            self.__engine: AIOEngine | None = None
+            self.__client: AsyncIOMotorClient | None = None  # type: ignore
+            self.__engine: AIOEngine | None = None  # type: ignore
 
     @asynccontextmanager
     async def get_mongodb(self):
