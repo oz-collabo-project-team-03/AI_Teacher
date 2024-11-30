@@ -1,8 +1,8 @@
-from fastapi import APIRouter, WebSocket, Depends
-from src.app.common.utils.dependency import get_current_user
+from fastapi import APIRouter, Depends, WebSocket
 from odmantic import AIOEngine
 
 from src.app.common.factory import mongo_db
+from src.app.common.utils.dependency import get_current_user
 
 router = APIRouter(tags=["Websocket"])
 

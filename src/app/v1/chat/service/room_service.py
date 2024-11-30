@@ -1,7 +1,7 @@
 from fastapi import HTTPException
+from odmantic import AIOEngine
 
 from src.app.v1.chat.repository.room_repository import RoomRepository
-from odmantic import AIOEngine
 from src.app.v1.chat.schema.room_request import RoomCreateRequest
 from src.app.v1.chat.schema.room_response import RoomCreateResponse
 

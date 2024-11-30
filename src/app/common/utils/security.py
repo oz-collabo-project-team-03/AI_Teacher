@@ -64,11 +64,11 @@ def verify_access_token(token: str) -> dict:
         return payload
     except jwt.ExpiredSignatureError:
         logger.error("Expired token.")
-        raise HTTPException(status_code=401, detail="Token has expired.")
+        raise HTTPException(status_code=401, detail="토큰이 만료되었습니다.")
     except jwt.DecodeError as e:
         logger.error(f"Decode error: {e}")
         logger.debug(f"Token causing issue: {token}")
-        raise HTTPException(status_code=400, detail="Invalid token.")
+        raise HTTPException(status_code=400, detail="유효하지 않은 토큰입니다.")
     except Exception as e:
         logger.error(f"Unknown error: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=500, detail="데이터베이스에 오류가 발생했습니다.")

@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncResult, AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 from ulid import ulid  # type: ignore
 
 from src.app.common.models.tag import Tag
@@ -16,6 +16,7 @@ from src.app.common.utils.verify_password import (
     validate_password_complexity,
 )
 from src.app.v1.post.entity.post import Post
+from src.app.v1.post.entity.post_image import PostImage
 from src.app.v1.user.entity.organization import Organization
 from src.app.v1.user.entity.student import Student
 from src.app.v1.user.entity.study_group import StudyGroup
@@ -322,96 +323,74 @@ class UserRepository:
                 logger.error(f"학생 정보 업데이트 중 오류 발생: user_id={user_id}, error={e}")
                 raise HTTPException(status_code=500, detail="학생 정보 업데이트 중 데이터베이스 오류가 발생했습니다.")
 
+    # 프로필 조회
+    async def get_user_with_profile(self, user_id: int, session: AsyncSession):
+        query = (
+            select(User)
+            .options(
+                joinedload(User.student),
+                joinedload(User.teacher).joinedload(Teacher.organization),
+                joinedload(User.tag),
+            )
+            .where(User.id == user_id)
+        )
+        result = await session.execute(query)
+        user = result.scalars().first()
+        if not user:
+            logger.warning(f"User with ID {user_id} not found.")
+        return user
 
-#
-#
-#
-#     storage_service = NCPStorageService()
-#     # 프로필 조회
-#     async def get_student_profile(self, session: AsyncSession, user_id: int) -> dict:
-#         result = await session.execute(
-#             select(Student).where(Student.user_id == user_id)
-#         )
-#         student = result.scalars().first()
-#
-#         if not student:
-#             raise HTTPException(status_code=404, detail="학생 데이터를 찾을 수 없습니다.")
-#
-#         profile_data = {
-#             "school": student.school,
-#             "grade": student.grade,
-#             "career_aspiration": student.career_aspiration,
-#             "interest": student.interest,
-#             "description": student.description,
-#         }
-#
-#         return profile_data
-#
-#     async def get_teacher_profile(self, session: AsyncSession, user_id: int) -> dict:
-#         result = await session.execute(
-#             select(Teacher).where(Teacher.user_id == user_id)
-#         )
-#         teacher = result.scalars().first()
-#
-#         if not teacher or not teacher.organization:
-#             raise HTTPException(status_code=404, detail="교사 데이터를 찾을 수 없습니다.")
-#
-#         profile_data = {
-#             "organization_name": teacher.organization.name,
-#             "organization_type": teacher.organization.type,
-#             "organization_position": teacher.organization.position,
-#         }
-#
-#         return profile_data
-#
-# async def get_profile(self, session: AsyncSession, user_id: int, bucket_name: str) -> dict:
-#     try:
-#         result = await session.execute(
-#             select(User).where(User.id == user_id)
-#         )
-#         user = result.scalars().first()
-#
-#         if not user:
-#             raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
-#
-#         profile_image_url = get_s3_url(bucket_name, user.profile_image)
-#
-#         profile_data = {
-#             "id": user.id,
-#             "role": user.role,
-#             "nickname": user.tag.nickname if user.tag else None,
-#             "profile_image": profile_image_url,
-#         }
-#
-#         if user.role == "student":
-#             student_data = await self.get_student_profile(session, user_id)
-#             profile_data.update(student_data)
-#         elif user.role == "teacher":
-#             teacher_data = await self.get_teacher_profile(session, user_id)
-#             profile_data.update(teacher_data)
-#
-#         posts_result = await session.execute(
-#             select(Post).where(Post.author_id == user_id)
-#         )
-#         posts = posts_result.scalars().all()
-#
-#         posts_data = {
-#             "post_count": len(posts),
-#             "like_count": sum(post.like_count for post in posts),
-#             "comment_count": sum(post.comment_count for post in posts),
-#             "posts": [
-#                 {
-#                     "post_id": post.external_id,
-#                     "post_image": get_s3_url(bucket_name, post.images[0].image_path) if post.images else None,
-#                 }
-#                 for post in posts
-#             ],
-#         }
-#
-#         profile_data.update(posts_data)
-#
-#         return profile_data
-#
-#     except Exception as e:
-#         logger.error(f"Error fetching profile for user_id={user_id}: {e}")
-#         raise HTTPException(status_code=500, detail="프로필 조회 중 오류가 발생했습니다.")
+    async def get_posts_by_user(self, user_id: int, session: AsyncSession):
+        try:
+            query = select(Post, PostImage).join(PostImage, PostImage.post_id == Post.id, isouter=True).where(Post.author_id == user_id)
+            result = await session.execute(query)
+            rows = result.fetchall()
+
+            posts = {}
+            for post, image in rows:
+                if post.id not in posts:
+                    posts[post.id] = {
+                        "post": post,
+                        "images": [],
+                    }
+                if image:
+                    posts[post.id]["images"].append(image)
+
+            logger.info(f"Retrieved {len(posts)} posts for user ID {user_id}")
+            return list(posts.values())
+        except Exception as e:
+            logger.error(f"Error fetching posts for user ID {user_id}: {str(e)}")
+            raise
+
+    # 학생 프로필 업데이트
+    async def update_user_profile(self, user_id: int, update_data: dict, session: AsyncSession) -> bool:
+        try:
+            user = await self.get_user_with_profile(user_id, session)
+            if not user:
+                logger.warning(f"User with ID {user_id} not found.")
+                raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
+
+            if "nickname" in update_data:
+                if user.tag:
+                    user.tag.nickname = update_data["nickname"]
+                else:
+                    new_tag = Tag(user_id=user.id, nickname=update_data["nickname"])
+                    session.add(new_tag)
+
+            if "profile_image" in update_data:
+                user.profile_image = update_data["profile_image"]
+
+            if user.student:
+                student = user.student
+                if "career_aspiration" in update_data:
+                    student.career_aspiration = update_data["career_aspiration"]
+                if "interest" in update_data:
+                    student.interest = update_data["interest"]
+                if "description" in update_data:
+                    student.description = update_data["description"]
+
+            logger.info(f"User profile updated successfully for user_id={user_id}")
+            return True
+        except SQLAlchemyError as e:
+            logger.error(f"Database error while updating profile for user_id={user_id}: {str(e)}")
+            raise

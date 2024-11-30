@@ -7,6 +7,7 @@ from src.app.common.utils.consts import UserRole
 
 class TokenResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+    id: int
     access_token: str
     refresh_token: str  # 테스트 용
     token_type: str
@@ -49,45 +50,35 @@ class UserInfoResponse(BaseModel):
     grade: str | None  # 학생 전용 (GradeNumber)
 
 
-class PostResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    post_id: str
-    post_image: str
-
-
-class StudentProfileResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    role: UserRole = UserRole.STUDENT
-    id: str
+class CommonProfileResponse(BaseModel):
+    role: str
+    id: int
     nickname: str
     profile_image: str | None
     post_count: int
     like_count: int
     comment_count: int
+
+
+class PostResponse(BaseModel):
+    post_id: str
+    post_image: str | None
+
+
+class StudentProfileResponse(CommonProfileResponse):
     school: str
-    grade: int
+    grade: str
     career_aspiration: str | None
     interest: str | None
     description: str | None
     posts: List[PostResponse]
 
 
-class TeacherProfileResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    role: UserRole = UserRole.TEACHER
-    id: str
-    nickname: str
-    profile_image: str | None
-    post_count: int
-    like_count: int
-    comment_count: int
-    organization_name: str | None
-    organization_type: str | None
-    organization_position: str | None
+class TeacherProfileResponse(CommonProfileResponse):
+    organization_name: str
+    organization_type: str
+    position: str
     posts: List[PostResponse]
-
-
-ProfileResponse = Union[StudentProfileResponse, TeacherProfileResponse]
 
 
 class CurrentUser(BaseModel):

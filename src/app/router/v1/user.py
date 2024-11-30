@@ -1,17 +1,47 @@
-from fastapi import APIRouter, Depends
+from typing import Union
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.app.common.utils.dependency import get_session
+from src.app.common.utils.dependency import get_current_user, get_session
+from src.app.v1.auth.schema.responseDto import MessageResponse
 from src.app.v1.user.repository.user_repository import UserRepository
-from src.app.v1.user.schema.responseDto import ProfileResponse
+from src.app.v1.user.schema.requestDto import UpdateStudentProfileRequest
+from src.app.v1.user.schema.responseDto import (
+    StudentProfileResponse,
+    TeacherProfileResponse,
+)
 from src.app.v1.user.service.user_service import UserService
 
-router = APIRouter(prefix="/user", tags=["Mypage"])
+router = APIRouter(prefix="/users", tags=["Mypage"])
 user_repo = UserRepository()
 user_service = UserService(user_repo=user_repo)
 
+# 타인 -> 내 프로필 조회
 
-# # 다른 사람이 유저 조회
-# @router.get("/profile/{user_id}", response_model=ProfileResponse)
-# async def get_user_profile(user_id: int, session: AsyncSession = Depends(get_session)):
-#     return await user_service.get_user_profile(session, user_id)
+
+# 자신 -> 내 프로필 조회
+@router.get("/profile/me", response_model=Union[StudentProfileResponse, TeacherProfileResponse])
+async def get_profile(
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    return await user_service.get_user_profile(
+        user_id=current_user["user_id"],
+        role=current_user["role"],
+        session=session,
+    )
+
+
+# 학생 프로필 변경
+@router.patch("/profile/me", response_model=MessageResponse)
+async def update_student_profile(
+    request: UpdateStudentProfileRequest,
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    return await user_service.update_student_profile(
+        user_id=current_user["user_id"],
+        update_data=request.dict(exclude_unset=True),
+        session=session,
+    )

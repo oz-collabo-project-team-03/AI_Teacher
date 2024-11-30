@@ -84,3 +84,11 @@ class StudyGroupRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     teacher_id: int
     name: str
+
+
+class UpdateStudentProfileRequest(BaseModel):
+    nickname: str | None = None
+    profile_image: str | None = None
+    career_aspiration: str | None = None
+    interest: str | None = None
+    description: str | None = None
