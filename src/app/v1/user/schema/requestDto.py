@@ -86,6 +86,7 @@ class StudyGroupRequest(BaseModel):
     name: str
 
 
+
 class UpdateStudentProfileRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     nickname: str | None = None
