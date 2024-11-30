@@ -12,12 +12,12 @@ class Message(Model):
     title: str
     sender_id: int
     message_type: str
-    room_id: int  # type: ignore
+    room_id: int
     content: str
     # FIXME: 현재 시간 적용
     timestamp: datetime
 
-    model_config = {  # type: ignore
+    model_config = {
         "collection": "chat",
     }
 

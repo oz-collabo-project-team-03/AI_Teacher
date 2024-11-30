@@ -574,13 +574,36 @@ class UserService:
                     raise HTTPException(status_code=403, detail="학생만 프로필을 편집할 수 있습니다.")
 
                 # 업데이트 처리
-                updated = await self.user_repo.update_user_profile(user_id, update_data, session)
+                updated = await self.user_repo.update_student_profile(user_id, update_data, session)
                 if not updated:
                     print(f"Profile update failed for user_id={user_id}")
                     raise HTTPException(status_code=400, detail="프로필 업데이트에 실패했습니다.")
 
             print(f"Student profile updated successfully for user_id={user_id}")
             return {"message": "학생 프로필 정보가 성공적으로 변경되었습니다."}
+        except SQLAlchemyError as e:
+            print(f"Database error during profile update for user_id={user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="데이터베이스 처리 중 오류가 발생했습니다.")
+        except Exception as e:
+            print(f"Unexpected error during profile update for user_id={user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="프로필 업데이트 중 알 수 없는 오류가 발생했습니다.")
+    # 교사 프로필 업데이트
+    async def update_teacher_profile(self, user_id: int, profile_data: dict, session: AsyncSession) -> dict:
+        try:
+            async with session.begin():
+                user = await self.user_repo.get_user_with_profile(user_id, session)
+                if not user or user.role != UserRole.TEACHER:
+                    print(f"Invalid role or user not found for user_id={user_id}")
+                    raise HTTPException(status_code=403, detail="선생님만 프로필을 편집할 수 있습니다.")
+
+
+                updated = await self.user_repo.update_teacher_profile(user_id, profile_data, session)
+                if not updated:
+                    print(f"Profile update failed for user_id={user_id}")
+                    raise HTTPException(status_code=400, detail="프로필 업데이트에 실패했습니다.")
+
+            print(f"Teacher profile updated successfully for user_id={user_id}")
+            return {"message": "선생님 프로필 정보가 성공적으로 변경되었습니다."}
         except SQLAlchemyError as e:
             print(f"Database error during profile update for user_id={user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="데이터베이스 처리 중 오류가 발생했습니다.")

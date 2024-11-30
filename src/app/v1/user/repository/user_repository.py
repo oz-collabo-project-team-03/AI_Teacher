@@ -363,7 +363,7 @@ class UserRepository:
             raise
 
     # 학생 프로필 업데이트
-    async def update_user_profile(self, user_id: int, update_data: dict, session: AsyncSession) -> bool:
+    async def update_student_profile(self, user_id: int, update_data: dict, session: AsyncSession) -> bool:
         try:
             user = await self.get_user_with_profile(user_id, session)
             if not user:
@@ -394,3 +394,39 @@ class UserRepository:
         except SQLAlchemyError as e:
             logger.error(f"Database error while updating profile for user_id={user_id}: {str(e)}")
             raise
+    #교사 프로필 변경
+    async def update_teacher_profile(self, user_id: int, profile_data: dict, session: AsyncSession) -> bool:
+        try:
+            user = await self.get_user_with_profile(user_id, session)
+            if not user:
+                print(f"User with ID {user_id} not found.")
+                raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+
+            if "nickname" in profile_data:
+                if user.tag:
+                    user.tag.nickname = profile_data["nickname"]
+                else:
+                    new_tag = Tag(user_id=user.id, nickname=profile_data["nickname"])
+                    session.add(new_tag)
+
+            if "profile_image" in profile_data:
+                user.profile_image = profile_data["profile_image"]
+
+            if user.teacher and user.teacher.organization:
+                organization = user.teacher.organization
+                if "organization_name" in profile_data:
+                    organization.name = profile_data["organization_name"]
+                if "organization_type" in profile_data:
+                    organization.type = profile_data["organization_type"]
+                if "organization_position" in profile_data:
+                    organization.position = profile_data["organization_position"]
+
+            await session.flush()
+            print(f"Teacher profile updated successfully for user_id={user_id}")
+            return True
+        except SQLAlchemyError as e:
+            print(f"Database error while updating teacher profile for user_id={user_id}: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail="프로필 업데이트 중 데이터베이스 오류가 발생했습니다."
+            )
