@@ -2,7 +2,7 @@ import os
 
 import sqlalchemy
 from dotenv import load_dotenv
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine, AsyncEngine
 from sqlalchemy.orm import declarative_base
 
 load_dotenv()
@@ -35,3 +35,8 @@ SessionLocal = async_sessionmaker(
 )
 
 Base = declarative_base()
+
+async def initialize_database(async_engine: AsyncEngine):
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)  # 모든 테이블 삭제
+        await conn.run_sync(Base.metadata.create_all)  # 모든 테이블 생성성

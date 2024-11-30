@@ -1,7 +1,4 @@
 import logging
-
-# from src.app.common.utils.image import NCPStorageService
-from email_validator import EmailNotValidError, validate_email
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncResult, AsyncSession
@@ -13,7 +10,6 @@ from src.app.common.models.tag import Tag
 from src.app.common.utils.consts import UserRole
 from src.app.common.utils.verify_password import (
     hash_password,
-    validate_password_complexity,
 )
 from src.app.v1.post.entity.post import Post
 from src.app.v1.post.entity.post_image import PostImage
