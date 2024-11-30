@@ -58,4 +58,3 @@ async def update_teacher_profile(
         session=session,
     )
 
-

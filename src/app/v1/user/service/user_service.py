@@ -446,6 +446,7 @@ class UserService:
             return teachers
         except SQLAlchemyError as e:
             logger.error(f"교사 정보 조회 중 오류 발생: {e}")
+
             raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
         except Exception as e:
             logger.error(f"예상치 못한 오류 발생: {e}")
@@ -610,3 +611,4 @@ class UserService:
         except Exception as e:
             print(f"Unexpected error during profile update for user_id={user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="프로필 업데이트 중 알 수 없는 오류가 발생했습니다.")
+

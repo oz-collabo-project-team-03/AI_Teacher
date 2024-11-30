@@ -319,7 +319,7 @@ class UserRepository:
                 logger.error(f"학생 정보 업데이트 중 오류 발생: user_id={user_id}, error={e}")
                 raise HTTPException(status_code=500, detail="학생 정보 업데이트 중 데이터베이스 오류가 발생했습니다.")
 
-    # 프로필 조회
+      # 프로필 조회
     async def get_user_with_profile(self, user_id: int, session: AsyncSession):
         query = (
             select(User)
