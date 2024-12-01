@@ -32,7 +32,7 @@ class UserInfoResponse(BaseModel):
     email: EmailStr
     phone: str
     school: str | None  # 학생 전용
-    grade: str | None  # 학생 전용 (GradeNumber)
+    grade: int | None  # 학생 전용 (GradeNumber)
 
 
 from typing import Literal
