@@ -17,11 +17,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 # DB 세션 의존성
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    try:
-        async with SessionLocal() as session:
-            yield session
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    async with SessionLocal() as session:
+        yield session
 
 
 async def get_current_user(

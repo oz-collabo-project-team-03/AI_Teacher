@@ -31,18 +31,37 @@ class UserRepository:
     async def _get_user(self, session: AsyncSession, **kwargs) -> User | None:
         try:
             query = select(User).options(selectinload(User.student), selectinload(User.teacher))
+
             for key, value in kwargs.items():
+                if not hasattr(User, key):
+                    logger.error(f"Invalid field in query parameters: {key}")
+                    raise HTTPException(status_code=400, detail=f"Invalid field '{key}' in query parameters.")
+
+                # 필드 값 변환 처리 (예: id는 정수로 변환)
                 if key == "id":
-                    value = int(value)  # user_id를 정수로 변환
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        logger.error(f"Invalid value for 'id': {value}")
+                        raise HTTPException(status_code=400, detail="Invalid value for 'id'.")
+
                 query = query.filter(getattr(User, key) == value)
+
+            logger.debug(f"Generated query: {query}")
             result = await session.execute(query)
-            return result.scalars().first()
-        except ValueError as e:
-            logger.error(f"Invalid type for key {key}: {value}. Error: {e}")
-            raise HTTPException(status_code=400, detail="잘못된 데이터 형식입니다.")
-        except SQLAlchemyError as e:
-            logger.error(f"Failed to fetch user: {e}")
-            raise HTTPException(status_code=500, detail="데이터베이스 조회 중 오류가 발생했습니다.")
+            user = result.scalars().first()
+
+            if not user:
+                logger.warning(f"No user found for query: {kwargs}")
+                return None
+
+            logger.debug(f"Query result: {user}")
+            return user
+
+
+        except HTTPException as e:
+            print(f"HTTPException 발생: {e.status_code}, {e.detail}")
+            raise e
 
     async def get_user_by_id(self, session: AsyncSession, user_id: int) -> User | None:
         return await self._get_user(session, id=user_id)
@@ -70,6 +89,13 @@ class UserRepository:
     async def create_student(self, session: AsyncSession, user_data: dict, student_data: dict):
         async with session.begin():
             try:
+                if nickname := user_data.get("nickname"):
+                    existing_nickname = await session.execute(
+                        select(Tag).where(Tag.nickname == nickname)
+                    )
+                    if existing_nickname.scalar():
+                        raise HTTPException(status_code=400, detail="중복된 닉네임이 존재합니다.")
+
                 user = User(
                     external_id=ulid(),
                     email=user_data["email"],
@@ -93,11 +119,11 @@ class UserRepository:
                     interest=student_data.get("interest"),
                 )
                 session.add(student)
-
                 return user
 
             except IntegrityError as e:
-                logger.error(f"Integrity error: {e}")
+                await session.rollback()
+                print(f"IntegrityError 발생: {e}")
                 error_detail = str(e.orig).lower()
 
                 if "email" in error_detail:
@@ -109,14 +135,20 @@ class UserRepository:
                 else:
                     detail = "중복된 데이터가 감지되었습니다."
 
+                print(f"400 에러 반환: {detail}")
                 raise HTTPException(status_code=400, detail=detail)
-            except SQLAlchemyError as e:
-                logger.error(f"Error creating student: {e}")
-                raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
+
 
     async def create_teacher(self, session: AsyncSession, user_data: dict, teacher_data: dict):
         async with session.begin():
             try:
+                if nickname := user_data.get("nickname"):
+                    existing_nickname = await session.execute(
+                        select(Tag).where(Tag.nickname == nickname)
+                    )
+                    if existing_nickname.scalar():
+                        raise HTTPException(status_code=400, detail="중복된 닉네임이 존재합니다.")
+
                 user = User(
                     external_id=ulid(),
                     email=user_data["email"],
@@ -161,165 +193,133 @@ class UserRepository:
 
                 raise HTTPException(status_code=400, detail=detail)
 
-            except SQLAlchemyError as e:
-                logger.error(f"Error creating teacher: {e}")
-                raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
     async def reset_user_password(self, session: AsyncSession, email: str, temp_password: str):
         async with session.begin():
-            try:
-                user = await self.get_user_by_email(session, email)
-                if not user:
-                    raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
-                user.password = hash_password(temp_password)
-                logger.info(f"사용자 비밀번호 업데이트 완료. email: {email}")
-            except Exception as e:
-                logger.error(f"비밀번호 업데이트 중 오류 발생: {e}")
-                raise
+            user = await self.get_user_by_email(session, email)
+            if not user:
+                raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+
+            user.password = hash_password(temp_password)
+            logger.info(f"사용자 비밀번호 업데이트 완료. email: {email}")
 
     # 모든 선생님 (이름, 조직이름, 조직타입, 포지션) 조회
     async def get_all_teachers_info(self, session: AsyncSession) -> list[dict]:
-        try:
-            query = (
-                select(
-                    Teacher.id.label("teacher_id"),
-                    Tag.nickname.label("name"),
-                    Organization.name.label("organization_name"),
-                    Organization.type.label("organization_type"),
-                    Organization.position.label("position"),
-                )
-                .join(User, User.id == Teacher.user_id)  #
-                .join(Organization, Organization.teacher_id == Teacher.id, isouter=True)
-                .join(Tag, Tag.user_id == User.id, isouter=True)
-                .where(User.role == UserRole.TEACHER)
+        query = (
+            select(
+                Teacher.id.label("teacher_id"),
+                Tag.nickname.label("name"),
+                Organization.name.label("organization_name"),
+                Organization.type.label("organization_type"),
+                Organization.position.label("position"),
             )
+            .join(User, User.id == Teacher.user_id)  #
+            .join(Organization, Organization.teacher_id == Teacher.id, isouter=True)
+            .join(Tag, Tag.user_id == User.id, isouter=True)
+            .where(User.role == UserRole.TEACHER)
+        )
 
-            result = await session.execute(query)
-            teachers = result.fetchall()
+        result = await session.execute(query)
+        teachers = result.fetchall()
 
-            return [
-                {
-                    "teacher_id": teacher.teacher_id,
-                    "name": teacher.name,
-                    "organization_name": teacher.organization_name,
-                    "organization_type": teacher.organization_type,
-                    "position": teacher.position,
-                }
-                for teacher in teachers
-            ]
-        except SQLAlchemyError as e:
-            raise RuntimeError(f"교사 정보 조회 중 데이터베이스 오류: {e}")
+        return [
+            {
+                "teacher_id": teacher.teacher_id,
+                "name": teacher.name,
+                "organization_name": teacher.organization_name,
+                "organization_type": teacher.organization_type,
+                "position": teacher.position,
+            }
+            for teacher in teachers
+        ]
 
     # 학생 최초 로그인 시 선생님 조회
     async def get_student_id(self, session: AsyncSession, user_id: int) -> int | None:
-        try:
-            query = select(Student.id).where(Student.user_id == user_id)
-            result = await session.execute(query)
-            return result.scalar()
-        except SQLAlchemyError as e:
-            raise RuntimeError(f"Database error while fetching student ID: {e}")
+        query = select(Student.id).where(Student.user_id == user_id)
+        result = await session.execute(query)
+        return result.scalar()
 
     async def get_teacher_by_id_and_name(self, session: AsyncSession, teacher_id: int, name: str) -> int | None:
-        try:
-            query = select(Teacher.id).join(Tag, Tag.user_id == Teacher.user_id).where(Teacher.id == teacher_id).where(Tag.nickname == name)
-            result = await session.execute(query)
-            return result.scalar()
-        except SQLAlchemyError as e:
-            raise RuntimeError(f"Database error while fetching teacher: {e}")
+        query = select(Teacher.id).join(Tag, Tag.user_id == Teacher.user_id).where(Teacher.id == teacher_id).where(Tag.nickname == name)
+        result = await session.execute(query)
+        return result.scalar()
+
 
     async def create_study_group(self, session: AsyncSession, student_id: int, teacher_id: int):
-        try:
-            new_group = StudyGroup(student_id=student_id, teacher_id=teacher_id)
-            session.add(new_group)
-            await session.commit()
-            return new_group
-        except SQLAlchemyError as e:
-            raise RuntimeError(f"Database error while creating study group: {e}")
+        new_group = StudyGroup(student_id=student_id, teacher_id=teacher_id)
+        session.add(new_group)
+        await session.commit()
+        return new_group
+
 
     # 교사 회원정보 조회 -> 이메일, 패스워드, 전화번호
     async def get_teacher_info(self, session: AsyncSession, user_id: int) -> dict:
-        try:
+        user = await self.get_user_by_id(session, user_id)
+        if not user or user.role != UserRole.TEACHER:
+            logger.error(f"교사 정보를 찾을 수 없습니다: user_id={user_id}")
+            raise HTTPException(status_code=404, detail="교사 정보를 찾을 수 없습니다.")
+
+        teacher_info = {
+            "email": user.email,
+            "password": user.password,
+            "phone": user.phone,
+        }
+        logger.info(f"교사 정보 조회 성공: user_id={user_id}, teacher_info={teacher_info}")
+        return teacher_info
+
+
+    async def get_student_info(self, session: AsyncSession, user_id: int) -> dict:
+        user = await self.get_user_by_id(session, user_id)
+        if not user or user.role != UserRole.STUDENT:
+            logger.error(f"학생 정보를 찾을 수 없습니다: user_id={user_id}")
+            raise HTTPException(status_code=404, detail="학생 정보를 찾을 수 없습니다.")
+
+        student = user.student
+        if not student:
+            logger.error(f"학생 데이터를 찾을 수 없습니다: user_id={user_id}")
+            raise HTTPException(status_code=404, detail="학생 데이터를 찾을 수 없습니다.")
+
+        student_info = {
+            "email": user.email,
+            "password": user.password,
+            "phone": user.phone,
+            "school": student.school,
+            "grade": student.grade,
+        }
+        logger.info(f"학생 정보 조회 성공: user_id={user_id}, student_info={student_info}")
+        return student_info
+
+
+    async def update_teacher_info(self, session: AsyncSession, user_id: int, update_data: dict):
+        async with session.begin():
             user = await self.get_user_by_id(session, user_id)
             if not user or user.role != UserRole.TEACHER:
                 logger.error(f"교사 정보를 찾을 수 없습니다: user_id={user_id}")
                 raise HTTPException(status_code=404, detail="교사 정보를 찾을 수 없습니다.")
 
-            teacher_info = {
-                "email": user.email,
-                "password": user.password,
-                "phone": user.phone,
-            }
-            logger.info(f"교사 정보 조회 성공: user_id={user_id}, teacher_info={teacher_info}")
-            return teacher_info
-        except SQLAlchemyError as e:
-            logger.error(f"교사 정보 조회 중 오류 발생: user_id={user_id}, error={e}")
-            raise HTTPException(status_code=500, detail="교사 정보 조회 중 데이터베이스 오류가 발생했습니다.")
+            for field, value in update_data.items():
+                setattr(user, field, value)
 
-    async def get_student_info(self, session: AsyncSession, user_id: int) -> dict:
-        try:
+
+
+    async def update_student_info(self, session: AsyncSession, user_id: int, common_fields: dict, student_fields: dict):
+        async with session.begin():
             user = await self.get_user_by_id(session, user_id)
             if not user or user.role != UserRole.STUDENT:
                 logger.error(f"학생 정보를 찾을 수 없습니다: user_id={user_id}")
                 raise HTTPException(status_code=404, detail="학생 정보를 찾을 수 없습니다.")
+
+            for field, value in common_fields.items():
+                setattr(user, field, value)
 
             student = user.student
             if not student:
                 logger.error(f"학생 데이터를 찾을 수 없습니다: user_id={user_id}")
                 raise HTTPException(status_code=404, detail="학생 데이터를 찾을 수 없습니다.")
 
-            student_info = {
-                "email": user.email,
-                "password": user.password,
-                "phone": user.phone,
-                "school": student.school,
-                "grade": student.grade,
-            }
-            logger.info(f"학생 정보 조회 성공: user_id={user_id}, student_info={student_info}")
-            return student_info
-        except SQLAlchemyError as e:
-            logger.error(f"학생 정보 조회 중 오류 발생: user_id={user_id}, error={e}")
-            raise HTTPException(status_code=500, detail="학생 정보 조회 중 데이터베이스 오류가 발생했습니다.")
-
-    async def update_teacher_info(self, session: AsyncSession, user_id: int, update_data: dict):
-        async with session.begin():
-            try:
-                user = await self.get_user_by_id(session, user_id)
-                if not user or user.role != UserRole.TEACHER:
-                    logger.error(f"교사 정보를 찾을 수 없습니다: user_id={user_id}")
-                    raise HTTPException(status_code=404, detail="교사 정보를 찾을 수 없습니다.")
-
-                for field, value in update_data.items():
-                    setattr(user, field, value)
-
-                logger.info(f"교사 정보 업데이트 성공: user_id={user_id}, update_data={update_data}")
-            except SQLAlchemyError as e:
-                logger.error(f"교사 정보 업데이트 중 오류 발생: user_id={user_id}, error={e}")
-                raise HTTPException(status_code=500, detail="교사 정보 업데이트 중 데이터베이스 오류가 발생했습니다.")
-
-    async def update_student_info(self, session: AsyncSession, user_id: int, common_fields: dict, student_fields: dict):
-        async with session.begin():
-            try:
-                user = await self.get_user_by_id(session, user_id)
-                if not user or user.role != UserRole.STUDENT:
-                    logger.error(f"학생 정보를 찾을 수 없습니다: user_id={user_id}")
-                    raise HTTPException(status_code=404, detail="학생 정보를 찾을 수 없습니다.")
-
-                for field, value in common_fields.items():
-                    setattr(user, field, value)
-
-                student = user.student
-                if not student:
-                    logger.error(f"학생 데이터를 찾을 수 없습니다: user_id={user_id}")
-                    raise HTTPException(status_code=404, detail="학생 데이터를 찾을 수 없습니다.")
-
-                for field, value in student_fields.items():
-                    setattr(student, field, value)
-
-                logger.info(f"학생 정보 업데이트 성공: user_id={user_id}, common_fields={common_fields}, student_fields={student_fields}")
-            except SQLAlchemyError as e:
-                logger.error(f"학생 정보 업데이트 중 오류 발생: user_id={user_id}, error={e}")
-                raise HTTPException(status_code=500, detail="학생 정보 업데이트 중 데이터베이스 오류가 발생했습니다.")
+            for field, value in student_fields.items():
+                setattr(student, field, value)
 
       # 프로필 조회
     async def get_user_with_profile(self, user_id: int, session: AsyncSession):
@@ -362,70 +362,61 @@ class UserRepository:
 
     # 학생 프로필 업데이트
     async def update_student_profile(self, user_id: int, update_data: dict, session: AsyncSession) -> bool:
-        try:
-            user = await self.get_user_with_profile(user_id, session)
-            if not user:
-                logger.warning(f"User with ID {user_id} not found.")
-                raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
+        user = await self.get_user_with_profile(user_id, session)
+        if not user:
+            logger.warning(f"User with ID {user_id} not found.")
+            raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
 
-            if "nickname" in update_data:
-                if user.tag:
-                    user.tag.nickname = update_data["nickname"]
-                else:
-                    new_tag = Tag(user_id=user.id, nickname=update_data["nickname"])
-                    session.add(new_tag)
+        if "nickname" in update_data:
+            if user.tag:
+                user.tag.nickname = update_data["nickname"]
+            else:
+                new_tag = Tag(user_id=user.id, nickname=update_data["nickname"])
+                session.add(new_tag)
 
-            if "profile_image" in update_data:
-                user.profile_image = update_data["profile_image"]
+        if "profile_image" in update_data:
+            user.profile_image = update_data["profile_image"]
 
-            if user.student:
-                student = user.student
-                if "career_aspiration" in update_data:
-                    student.career_aspiration = update_data["career_aspiration"]
-                if "interest" in update_data:
-                    student.interest = update_data["interest"]
-                if "description" in update_data:
-                    student.description = update_data["description"]
+        if user.student:
+            student = user.student
+            if "career_aspiration" in update_data:
+                student.career_aspiration = update_data["career_aspiration"]
+            if "interest" in update_data:
+                student.interest = update_data["interest"]
+            if "description" in update_data:
+                student.description = update_data["description"]
 
-            logger.info(f"User profile updated successfully for user_id={user_id}")
-            return True
-        except SQLAlchemyError as e:
-            logger.error(f"Database error while updating profile for user_id={user_id}: {str(e)}")
-            raise
+        logger.info(f"User profile updated successfully for user_id={user_id}")
+        return True
+
+
     #교사 프로필 변경
     async def update_teacher_profile(self, user_id: int, profile_data: dict, session: AsyncSession) -> bool:
-        try:
-            user = await self.get_user_with_profile(user_id, session)
-            if not user:
-                print(f"User with ID {user_id} not found.")
-                raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+        user = await self.get_user_with_profile(user_id, session)
+        if not user:
+            print(f"User with ID {user_id} not found.")
+            raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
-            if "nickname" in profile_data:
-                if user.tag:
-                    user.tag.nickname = profile_data["nickname"]
-                else:
-                    new_tag = Tag(user_id=user.id, nickname=profile_data["nickname"])
-                    session.add(new_tag)
+        if "nickname" in profile_data:
+            if user.tag:
+                user.tag.nickname = profile_data["nickname"]
+            else:
+                new_tag = Tag(user_id=user.id, nickname=profile_data["nickname"])
+                session.add(new_tag)
 
-            if "profile_image" in profile_data:
-                user.profile_image = profile_data["profile_image"]
+        if "profile_image" in profile_data:
+            user.profile_image = profile_data["profile_image"]
 
-            if user.teacher and user.teacher.organization:
-                organization = user.teacher.organization
-                if "organization_name" in profile_data:
-                    organization.name = profile_data["organization_name"]
-                if "organization_type" in profile_data:
-                    organization.type = profile_data["organization_type"]
-                if "organization_position" in profile_data:
-                    organization.position = profile_data["organization_position"]
+        if user.teacher and user.teacher.organization:
+            organization = user.teacher.organization
+            if "organization_name" in profile_data:
+                organization.name = profile_data["organization_name"]
+            if "organization_type" in profile_data:
+                organization.type = profile_data["organization_type"]
+            if "organization_position" in profile_data:
+                organization.position = profile_data["organization_position"]
 
-            await session.flush()
-            print(f"Teacher profile updated successfully for user_id={user_id}")
-            return True
-        except SQLAlchemyError as e:
-            print(f"Database error while updating teacher profile for user_id={user_id}: {str(e)}")
-            raise HTTPException(
-                status_code=500,
-                detail="프로필 업데이트 중 데이터베이스 오류가 발생했습니다."
-            )
+        await session.flush()
+        print(f"Teacher profile updated successfully for user_id={user_id}")
+        return True
 

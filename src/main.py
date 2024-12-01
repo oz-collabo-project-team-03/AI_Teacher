@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(level=logging.DEBUG)
@@ -25,6 +25,15 @@ from src.app.router import (
 )
 
 app = FastAPI(debug=True)
+# 테스트용 HTTPException 발생
+@app.get("/http-exception")
+async def raise_http_exception():
+    raise HTTPException(status_code=404, detail="테스트 404 에러입니다.")
+
+# 테스트용 일반 Exception 발생
+@app.get("/general-exception")
+async def raise_general_exception():
+    raise Exception("테스트 일반 예외입니다.")
 
 app.include_router(post_router)
 app.include_router(auth_router)
