@@ -1,5 +1,6 @@
 import logging
 from fastapi import HTTPException
+from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncResult, AsyncSession
 from sqlalchemy.future import select
@@ -11,6 +12,7 @@ from src.app.common.utils.consts import UserRole
 from src.app.common.utils.verify_password import (
     hash_password,
 )
+from src.app.v1.comment.entity.comment import Comment
 from src.app.v1.post.entity.post import Post
 from src.app.v1.post.entity.post_image import PostImage
 from src.app.v1.user.entity.organization import Organization
@@ -426,3 +428,4 @@ class UserRepository:
                 status_code=500,
                 detail="프로필 업데이트 중 데이터베이스 오류가 발생했습니다."
             )
+

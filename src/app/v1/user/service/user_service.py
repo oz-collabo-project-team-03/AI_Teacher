@@ -206,6 +206,9 @@ class UserService:
         user = await self.user_repo.get_user_by_email(session, email)
         if user is None:
             raise HTTPException(status_code=404, detail="등록되지 않은 이메일입니다.")
+        # 비활성화된 사용자 체크
+        if user.deactivated_at:
+            raise HTTPException(status_code=400, detail="비활성화된 사용자입니다. 계정을 복구하려면 지원팀에 문의해주세요.")
 
         if not verify_password(password, user.password):
             raise HTTPException(status_code=401, detail="비밀번호가 틀렸습니다.")
@@ -487,20 +490,15 @@ class UserService:
             raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
     # 남이 내 프로필 조회
-
-    # 내가 내 프로필 조회
-    async def get_user_profile(self, user_id: int, role: str, session: AsyncSession):
+    async def get_user_profile_by_id(self, user_id: int, session: AsyncSession):
         try:
-            # 유저 정보 가져오기
             user = await self.user_repo.get_user_with_profile(user_id, session)
             if not user:
                 raise HTTPException(status_code=404, detail="사용자 정보를 찾을 수 없습니다.")
 
-            # 닉네임 확인
             if not user.tag or not user.tag.nickname:
                 raise HTTPException(status_code=400, detail="사용자의 닉네임이 설정되지 않았습니다.")
 
-            # 게시물 정보 가져오기
             posts = await self.user_repo.get_posts_by_user(user_id, session)
             posts_data = [
                 PostResponse(
@@ -510,7 +508,70 @@ class UserService:
                 for post in posts
             ]
 
-            # 공통 데이터 생성
+            role = user.role
+            common_data = CommonProfileResponse(
+                role=role,
+                id=user.id,
+                nickname=user.tag.nickname,
+                profile_image=user.profile_image,
+                post_count=len(posts_data),
+                like_count=sum(post.like_count for post in posts),
+                comment_count=sum(post.comment_count for post in posts),
+            )
+            # 학생 프로필 생성
+            if role == UserRole.STUDENT.value:
+                if not user.student:
+                    raise HTTPException(status_code=404, detail="학생 정보를 찾을 수 없습니다.")
+                student_profile = StudentProfileResponse(
+                    **common_data.dict(),
+                    school=user.student.school,
+                    grade=f"{user.student.grade}학년",
+                    career_aspiration=user.student.career_aspiration,
+                    interest=user.student.interest,
+                    description=user.student.description,
+                    posts=posts_data,
+                )
+                return student_profile
+
+            # 교사 프로필 생성
+            elif role == UserRole.TEACHER.value:
+                if not user.teacher or not user.teacher.organization:
+                    raise HTTPException(status_code=404, detail="교사 정보를 찾을 수 없습니다.")
+                teacher_profile = TeacherProfileResponse(
+                    **common_data.dict(),
+                    organization_name=user.teacher.organization.name,
+                    organization_type=user.teacher.organization.type,
+                    position=user.teacher.organization.position,
+                    posts=posts_data,
+                )
+                return teacher_profile
+
+            else:
+                raise HTTPException(status_code=400, detail="올바르지 않은 역할입니다.")
+
+        except Exception as e:
+            logger.error(f"Error fetching profile for user_id={user_id}: {e}")
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
+
+    # 내가 내 프로필 조회
+    async def get_user_profile(self, user_id: int, role: str, session: AsyncSession):
+        try:
+            user = await self.user_repo.get_user_with_profile(user_id, session)
+            if not user:
+                raise HTTPException(status_code=404, detail="사용자 정보를 찾을 수 없습니다.")
+
+            if not user.tag or not user.tag.nickname:
+                raise HTTPException(status_code=400, detail="사용자의 닉네임이 설정되지 않았습니다.")
+
+            posts = await self.user_repo.get_posts_by_user(user_id, session)
+            posts_data = [
+                PostResponse(
+                    post_id=post.external_id,
+                    post_image=post.images[0].image_path if post.images else None,
+                )
+                for post in posts
+            ]
+
             common_data = CommonProfileResponse(
                 role=role,
                 id=user.id,
@@ -554,7 +615,6 @@ class UserService:
                 logger.debug(f"Teacher profile: {teacher_profile}")
                 return teacher_profile
 
-            # 올바르지 않은 역할 처리
             else:
                 raise HTTPException(status_code=400, detail="올바르지 않은 역할입니다.")
 
@@ -612,3 +672,41 @@ class UserService:
             print(f"Unexpected error during profile update for user_id={user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="프로필 업데이트 중 알 수 없는 오류가 발생했습니다.")
 
+    # 탈퇴하기 -> deactivated_at 30일 후 삭제
+    async def deactivate_user_service(self, user_id, session: AsyncSession) -> dict:
+        try:
+            print(f"Fetching user with id: {user_id}")
+            user = await self.user_repo.get_user_by_id(session, user_id)
+
+            if user is None:
+                print("User not found.")
+                raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+
+            print(f"Checking if user {user.id} is already deactivated...")
+            if user.deactivated_at:
+                print("User is already deactivated.")
+                raise HTTPException(status_code=400, detail="이미 비활성화된 사용자입니다.")
+
+            # 비활성화 날짜를 현재 시간으로 설정
+            print(f"Deactivating user {user.id}...")
+            user.deactivated_at = datetime.now()
+            session.add(user)
+            await session.commit()
+
+            print(f"User {user.id} deactivated successfully.")
+            return {"message": "탈퇴되었습니다. 해당 계정 복구를 원하시면 30일 이내로 문의주세요."}
+
+        except HTTPException as e:
+            print(f"HTTP Exception occurred: {str(e)}")
+            raise e
+
+        except Exception as e:
+            print(f"Unexpected error: {str(e)}")
+            print(f"Exception traceback: {e.__traceback__}")
+            raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Unexpected error: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+    # 30일 이상 비활성화된 사용자를 스케줄러로 삭제로직 예정

@@ -1,6 +1,6 @@
 from typing import Union
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.utils.dependency import get_current_user, get_session
@@ -18,7 +18,15 @@ user_repo = UserRepository()
 user_service = UserService(user_repo=user_repo)
 
 # 타인 -> 내 프로필 조회
-
+@router.get("/profile/{user_id}", response_model=Union[StudentProfileResponse, TeacherProfileResponse])
+async def get_user_profile(
+    user_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    return await user_service.get_user_profile_by_id(
+        user_id=user_id,
+        session=session,
+    )
 
 # 자신 -> 내 프로필 조회
 @router.get("/profile/me", response_model=Union[StudentProfileResponse, TeacherProfileResponse])
@@ -58,3 +66,12 @@ async def update_teacher_profile(
         session=session,
     )
 
+@router.post("/deactivate", response_model=MessageResponse)
+async def deactivate_user(
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    return await user_service.deactivate_user_service(
+        user_id=current_user["user_id"],
+        session=session
+    )

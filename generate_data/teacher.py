@@ -16,6 +16,7 @@ from src.app.v1.user.entity.teacher import Teacher
 from src.app.v1.user.entity.user import User
 from src.config.database.postgresql import DATABASE_URL, engine, SessionLocal, Base
 
+# 모델 정의를 여기다가
 
 # 미리 정의된 비밀번호 패턴
 PASSWORD_PATTERNS = [

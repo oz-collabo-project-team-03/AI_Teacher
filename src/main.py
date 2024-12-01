@@ -4,10 +4,9 @@ import platform
 import subprocess
 import sys
 from pathlib import Path
-import asyncio
+
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 
 logging.basicConfig(level=logging.DEBUG)
 

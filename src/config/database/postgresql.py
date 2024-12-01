@@ -36,7 +36,3 @@ SessionLocal = async_sessionmaker(
 
 Base = declarative_base()
 
-async def initialize_database(async_engine: AsyncEngine):
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)  # 모든 테이블 삭제
-        await conn.run_sync(Base.metadata.create_all)  # 모든 테이블 생성성
