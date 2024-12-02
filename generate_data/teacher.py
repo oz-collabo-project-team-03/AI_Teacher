@@ -19,9 +19,7 @@ from src.config.database.postgresql import DATABASE_URL, engine, SessionLocal, B
 # 모델 정의를 여기다가
 
 # 미리 정의된 비밀번호 패턴
-PASSWORD_PATTERNS = [
-    "qwe123!@#"
-]
+PASSWORD_PATTERNS = ["qwe123!@#"]
 
 # 학교 및 학원 데이터 정의
 ORGANIZATION_TYPES = ["학교", "학원"]
@@ -33,6 +31,7 @@ generated_emails = set()
 generated_phones = set()
 generated_nicknames = set()
 
+
 # 한글 이름 생성
 def generate_korean_name():
     first = ["김", "박", "이", "최", "정", "강", "조", "윤", "장", "임"]
@@ -40,18 +39,22 @@ def generate_korean_name():
     last = ["희", "재", "지", "원", "연", "호", "훈", "혁", "슬", "율"]
     return random.choice(first) + random.choice(middle) + random.choice(last)
 
+
 # 비밀번호 선택
 def select_password() -> str:
     return random.choice(PASSWORD_PATTERNS)
+
 
 # Argon2 해싱
 def hash_password(password: str) -> str:
     ph = PasswordHasher()
     return ph.hash(password)
 
+
 # 랜덤 문자열 생성
 def random_string(length: int) -> str:
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+    return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
 
 # 중복되지 않는 이메일 생성
 def generate_unique_email():
@@ -61,6 +64,7 @@ def generate_unique_email():
             generated_emails.add(email)
             return email
 
+
 # 중복되지 않는 핸드폰 번호 생성
 def generate_unique_phone():
     while True:
@@ -69,6 +73,7 @@ def generate_unique_phone():
             generated_phones.add(phone)
             return phone
 
+
 # 중복되지 않는 닉네임 생성
 def generate_unique_nickname():
     while True:
@@ -76,6 +81,7 @@ def generate_unique_nickname():
         if nickname not in generated_nicknames:
             generated_nicknames.add(nickname)
             return nickname
+
 
 # Teacher 데이터 생성 제너레이터
 async def generate_teacher_data(num_teachers: int = 5):
@@ -114,16 +120,13 @@ async def generate_teacher_data(num_teachers: int = 5):
         }
 
         # Tag 데이터 생성
-        tag_data = {
-            "tag_nickname": generate_korean_name()
-        }
+        tag_data = {"tag_nickname": generate_korean_name()}
 
         yield {
             "user": user_data,
             "teacher": teacher_data,
             "tag": tag_data,
         }
-
 
 
 # 데이터 삽입 함수
@@ -140,15 +143,12 @@ async def insert_teachers_async(session: AsyncSession, num_teachers: int = 5):
                 name=teacher_data["teacher"]["organization_name"],
                 type=teacher_data["teacher"]["organization_type"],
                 position=teacher_data["teacher"]["position"],
-                teacher_id=user.id
+                teacher_id=user.id,
             )
             session.add(organization)
 
             # Tag 객체 생성
-            tag = Tag(
-                nickname=teacher_data["tag"]["tag_nickname"],
-                user_id=user.id
-            )
+            tag = Tag(nickname=teacher_data["tag"]["tag_nickname"], user_id=user.id)
             session.add(tag)
 
             # Teacher 객체 생성
@@ -162,4 +162,3 @@ async def insert_teachers_async(session: AsyncSession, num_teachers: int = 5):
 
     await session.commit()
     print(f"{num_teachers}명의 교사 데이터가 성공적으로 생성되었습니다.")
-
