@@ -7,6 +7,12 @@ import subprocess
 import sys
 import asyncio
 from pathlib import Path
+
+# 프로젝트 루트 디렉토리를 sys.path에 추가
+# 상단에 위치 필수 !
+project_root = Path(__file__).parent.parent
+sys.path.append(str(project_root))
+
 from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
@@ -16,10 +22,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(level=logging.DEBUG)
 
-# 프로젝트 루트 디렉토리를 sys.path에 추가
-# 상단에 위치 필수 !
-project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root))
 
 # 여기부터 router 추가
 from src.app.router import auth_router, chat_router, comment_router, post_router, user_router, websocket_router
