@@ -5,6 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.app.common.utils.consts import SocialProvider, UserRole
 from src.config.database import Base
+from src.app.v1.chat.entity.participant import Participant
 
 
 class User(Base):
@@ -33,5 +34,6 @@ class User(Base):
     tag = relationship("Tag", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     # one-to-many
+    # student_participations = relationship("Participant", foreign_keys=[Participant.student_id], back_populates="student")
     participant = relationship("Participant", back_populates="user")
     posts = relationship("Post", backref="author", cascade="all, delete-orphan", lazy="select")
