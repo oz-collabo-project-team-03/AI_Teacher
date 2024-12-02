@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import platform
@@ -70,9 +71,35 @@ def run_check_script():
     except Exception as e:
         print(f"An error occurred: {e}")
 
+# 임시 데이터 생성 -> 학생 5명, 선생님 50명, 그룹 10명씩
+# from sqlalchemy.ext.asyncio import AsyncEngine
+# from src.config.database.postgresql import Base, SessionLocal, engine
+# 학생 생성, 선생님 생성, 그룹 생성 임포트
+# from generate_data.teacher import insert_teachers_async
+# from generate_data.student import insert_students_async
+# from generate_data.studygroup import group_students_with_teachers
+
+# async def initialize_database(async_engine: AsyncEngine):
+#
+#     async with async_engine.begin() as conn:
+#
+#         await conn.run_sync(Base.metadata.create_all)  # 새 테이블 생성
+#
+# async def main():
+#     # 데이터베이스 초기화
+#     print("데이터베이스 초기화 중...")
+#     await initialize_database(engine)
+#
+#     # 데이터 삽입
+#     print("초기 데이터를 생성합니다...")
+#     async with SessionLocal() as session:
+        # await insert_teachers_async(session, num_teachers=5)
+        # await insert_students_async(session, num_students=50)
+        # await group_students_with_teachers(session)
 
 if __name__ == "__main__":
     # run_check_script()
+    # asyncio.run(main())
     import uvicorn
 
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
