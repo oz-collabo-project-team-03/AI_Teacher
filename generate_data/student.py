@@ -31,7 +31,7 @@ def generate_ordered_email():
 # 순차적으로 전화번호 생성
 def generate_ordered_phone():
     global phone_counter
-    phone = f"+010{phone_counter}"
+    phone = f"010{phone_counter}"
     phone_counter += 1
     return phone
 
@@ -52,16 +52,7 @@ def generate_ordered_nickname():
 
 # 비밀번호 선택
 PASSWORD_PATTERNS = [
-    "qwer1234!!",
-    "asdf1234!!",
-    "qwe123!!!!",
-    "asdfqwer1!",
-    "ozozoz11!!",
-    "oooooooo1!",
-    "aaaaaaaa1!",
-    "qwerqwer1!",
-    "asdfasdf1!",
-    "zxcvzxcv1!"
+    "qwe123!@#",
 ]
 def select_password() -> str:
     return random.choice(PASSWORD_PATTERNS)

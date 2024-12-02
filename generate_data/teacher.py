@@ -20,16 +20,7 @@ from src.config.database.postgresql import DATABASE_URL, engine, SessionLocal, B
 
 # 미리 정의된 비밀번호 패턴
 PASSWORD_PATTERNS = [
-    "qwer1234!!",
-    "asdf1234!!",
-    "qwe123!!!!",
-    "asdfqwer1!",
-    "ozozoz11!!",
-    "oooooooo1!",
-    "aaaaaaaa1!",
-    "qwerqwer1!",
-    "asdfasdf1!",
-    "zxcvzxcv1!"
+    "qwe123!@#"
 ]
 
 # 학교 및 학원 데이터 정의
@@ -73,7 +64,7 @@ def generate_unique_email():
 # 중복되지 않는 핸드폰 번호 생성
 def generate_unique_phone():
     while True:
-        phone = f"+8210{random.randint(10000000, 99999999)}"
+        phone = f"010{random.randint(10000000, 99999999)}"
         if phone not in generated_phones:
             generated_phones.add(phone)
             return phone
@@ -95,7 +86,7 @@ async def generate_teacher_data(num_teachers: int = 5):
         user_data = {
             "external_id": random_string(10),
             "email": f"{random_string(5)}@example.com",
-            "phone": f"+8210{random.randint(10000000, 99999999)}",
+            "phone": f"010{random.randint(10000000, 99999999)}",
             "password": hash_password(plain_password),  # Argon2 해싱된 비밀번호
             "profile_image": None,
             "social_provider": None,
