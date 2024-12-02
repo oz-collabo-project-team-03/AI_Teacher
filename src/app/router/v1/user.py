@@ -17,17 +17,6 @@ router = APIRouter(prefix="/users", tags=["Mypage"])
 user_repo = UserRepository()
 user_service = UserService(user_repo=user_repo)
 
-# 타인 -> 내 프로필 조회
-@router.get("/profile/{user_id}", response_model=Union[StudentProfileResponse, TeacherProfileResponse])
-async def get_user_profile(
-    user_id: int,
-    session: AsyncSession = Depends(get_session),
-):
-    return await user_service.get_user_profile_by_id(
-        user_id=user_id,
-        session=session,
-    )
-
 # 자신 -> 내 프로필 조회
 @router.get("/profile/me", response_model=Union[StudentProfileResponse, TeacherProfileResponse])
 async def get_profile(
@@ -41,6 +30,16 @@ async def get_profile(
         session=session,
     )
 
+# 타인 -> 내 프로필 조회
+@router.get("/profile/{user_id}", response_model=Union[StudentProfileResponse, TeacherProfileResponse])
+async def get_user_profile(
+    user_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    return await user_service.get_user_profile_by_id(
+        user_id=user_id,
+        session=session,
+    )
 
 # 학생 프로필 변경
 @router.patch("/profile/student", response_model=MessageResponse)
