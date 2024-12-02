@@ -34,7 +34,8 @@ async def get_profile(
     current_user: dict = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    return await user_service.get_user_profile(
+    print(f"current_user['role']: {current_user['role']}")
+    return await user_service.get_my_profile(
         user_id=current_user["user_id"],
         role=current_user["role"],
         session=session,
