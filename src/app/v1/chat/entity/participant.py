@@ -1,14 +1,22 @@
 from sqlalchemy import BigInteger, ForeignKey
-from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from src.config.database import Base
 
 
 class Participant(Base):
     __tablename__ = "participants"
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    student_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    teacher_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     room_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("rooms.id"), nullable=False)
     user = relationship("User", back_populates="participant")
     room = relationship("Room", back_populates="participant")
+
+
+# class Participant(Base):
+#     __tablename__ = "participants"
+#     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+#     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+#     room_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("rooms.id"), nullable=False)
+#     user = relationship("User", back_populates="participant")
+#     room = relationship("Room", back_populates="participant")

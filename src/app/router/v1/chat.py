@@ -13,7 +13,7 @@ router = APIRouter(prefix="/chat", tags=["Chats"])
 
 
 # Create Room
-@router.post("/room", response_model=RoomCreateResponse)
+@router.post("/room", response_model=RoomCreateResponse, status_code=status.HTTP_201_CREATED)
 async def create_room(
     request: RoomCreateRequest,
     room_service: RoomService = Depends(get_room_service),
@@ -22,8 +22,7 @@ async def create_room(
     user_id = current_user.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=404, detail="User ID는 None일 수 없습니다.")
-    await room_service.create_room(request, user_id=user_id)
-    return Response(status_code=status.HTTP_201_CREATED)
+    return await room_service.create_room(request, user_id=int(user_id))
 
 
 # Delete Room
@@ -36,21 +35,23 @@ async def delete_room(
     user_id = current_user.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=404, detail="User ID는 None일 수 없습니다.")
-    await room_service.delete_room(room_id=room_id, user_id=user_id)
+    await room_service.delete_room(room_id=room_id, user_id=int(user_id))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # Ask Help
-@router.patch("/help/{room_id}")
+@router.patch("/help/{room_id}/{user_id}")
 async def ask_help(
     room_id: int,
+    user_id: int,
     room_service: RoomService = Depends(get_room_service),
-    current_user: dict = Depends(get_current_user),
+    # current_user: dict = Depends(get_current_user),
 ):
-    user_id = current_user.get("user_id")
+    # user_id = current_user.get("user_id")
+    user_id = user_id
     if user_id is None:
-        raise HTTPException(status_code=404, detail="User ID는 None일 수 없습니다.")
-    return await room_service.ask_help(room_id=room_id, user_id=user_id)
+        raise HTTPException(status_code=404, detail="User ID는 찾을 수 없습니다.")
+    return await room_service.ask_help(room_id=room_id, user_id=int(user_id))
 
 
 # Get Room
