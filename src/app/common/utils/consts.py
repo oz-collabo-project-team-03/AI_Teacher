@@ -29,6 +29,6 @@ class Visibility(Enum):
     STUDENT = "student"
 
 
-class MessageType(Enum):
+class MessageType(str, Enum):
     TEXT = "text"
     IMAGE = "image"

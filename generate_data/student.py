@@ -16,17 +16,21 @@ email_counter = 0
 phone_counter = 10000000
 nickname_counter = 0
 
+
 # 랜덤 문자열 생성
 def random_string(length: int) -> str:
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+    return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
+
 # 알파벳 순서로 이메일 생성
 def generate_ordered_email():
     global email_counter
     alphabet = string.ascii_lowercase
     base = email_counter % (len(alphabet) ** 4)
-    email = ''.join(alphabet[base // len(alphabet) ** i % len(alphabet)] for i in reversed(range(4)))
+    email = "".join(alphabet[base // len(alphabet) ** i % len(alphabet)] for i in reversed(range(4)))
     email_counter += 1
     return f"{email}@example.com"
+
 
 # 순차적으로 전화번호 생성
 def generate_ordered_phone():
@@ -35,31 +39,47 @@ def generate_ordered_phone():
     phone_counter += 1
     return phone
 
+
 # 닉네임 생성
 def generate_ordered_nickname():
     global nickname_counter
-    adjectives = [
-        "귀여운", "용감한", "빠른", "느긋한", "똑똑한", "멋진", "활기찬",
-        "침착한", "웃긴", "배고픈", "잠이 많은", "행복한", "슬픈", "화난"
-    ]
+    adjectives = ["귀여운", "용감한", "빠른", "느긋한", "똑똑한", "멋진", "활기찬", "침착한", "웃긴", "배고픈", "잠이 많은", "행복한", "슬픈", "화난"]
     animals = [
-        "고양이", "강아지", "호랑이", "사자", "코끼리", "펭귄", "토끼",
-        "다람쥐", "여우", "늑대", "돌고래", "원숭이", "햄스터", "공작", "독수리"
+        "고양이",
+        "강아지",
+        "호랑이",
+        "사자",
+        "코끼리",
+        "펭귄",
+        "토끼",
+        "다람쥐",
+        "여우",
+        "늑대",
+        "돌고래",
+        "원숭이",
+        "햄스터",
+        "공작",
+        "독수리",
     ]
     nickname = f"{adjectives[nickname_counter % len(adjectives)]} {animals[nickname_counter % len(animals)]}"
     nickname_counter += 1
     return nickname
 
+
 # 비밀번호 선택
 PASSWORD_PATTERNS = [
     "qwe123!@#",
 ]
+
+
 def select_password() -> str:
     return random.choice(PASSWORD_PATTERNS)
+
 
 def hash_password(password: str) -> str:
     ph = PasswordHasher()
     return ph.hash(password)
+
 
 # 학생 데이터 생성 제너레이터
 async def generate_student_data(num_students: int = 50):
@@ -95,15 +115,14 @@ async def generate_student_data(num_students: int = 50):
         }
 
         # Tag 데이터 생성
-        tag_data = {
-            "tag_nickname": generate_ordered_nickname()
-        }
+        tag_data = {"tag_nickname": generate_ordered_nickname()}
 
         yield {
             "user": user_data,
             "student": student_data,
             "tag": tag_data,
         }
+
 
 # 데이터 삽입 함수
 async def insert_students_async(session: AsyncSession, num_students: int = 50):
@@ -121,15 +140,12 @@ async def insert_students_async(session: AsyncSession, num_students: int = 50):
                 career_aspiration=student_data["student"]["career_aspiration"],
                 interest=student_data["student"]["interest"],
                 description=student_data["student"]["description"],
-                user_id=user.id
+                user_id=user.id,
             )
             session.add(student)
 
             # Tag 객체 생성
-            tag = Tag(
-                nickname=student_data["tag"]["tag_nickname"],
-                user_id=user.id
-            )
+            tag = Tag(nickname=student_data["tag"]["tag_nickname"], user_id=user.id)
             session.add(tag)
 
         except Exception as e:
@@ -144,4 +160,3 @@ async def insert_students_async(session: AsyncSession, num_students: int = 50):
         print(f"커밋 중 오류 발생: {e}")
         await session.rollback()
         raise
-

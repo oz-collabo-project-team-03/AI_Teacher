@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import Response
 from odmantic import AIOEngine
 
 from src.app.common.factory import get_room_service, mongo_db
@@ -26,7 +25,7 @@ async def create_room(
 
 
 # Delete Room
-@router.delete("/room/{room_id}")
+@router.delete("/room/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_room(
     room_id: int,
     room_service: RoomService = Depends(get_room_service),
@@ -35,8 +34,7 @@ async def delete_room(
     user_id = current_user.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=404, detail="User ID는 None일 수 없습니다.")
-    await room_service.delete_room(room_id=room_id, user_id=int(user_id))
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return await room_service.delete_room(room_id=room_id, user_id=int(user_id))
 
 
 # Ask Help
@@ -66,16 +64,6 @@ async def get_room_messages(
     if user_id is None:
         raise HTTPException(status_code=404, detail="User ID는 None일 수 없습니다.")
     return await room_service.get_room_messages(mongo, room_id=room_id, user_id=user_id)
-
-
-# 메시지 삽입 엔드포인트
-@router.post("/messages/")
-async def create_message(
-    message: Message,
-    mongo: AIOEngine = Depends(mongo_db),
-):
-    inserted_message = await mongo.save(message)
-    return {"message": "Message inserted successfully", "id": str(inserted_message.id)}
 
 
 # 메시지 조회 엔드포인트

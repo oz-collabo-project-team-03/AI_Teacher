@@ -2,7 +2,8 @@
 from datetime import datetime
 
 from bson import ObjectId
-from odmantic import Field, Model
+from odmantic import Model, Field
+from src.app.common.utils.consts import MessageType
 
 
 # MongoDB Collection
@@ -11,9 +12,9 @@ class Message(Model):
     room_id: int
     title: str
     sender_id: int
-    message_type: str
-    room_id: int
+    message_type: MessageType
     content: str
+    user_type: str
     # FIXME: 현재 시간 적용
     timestamp: datetime
 
