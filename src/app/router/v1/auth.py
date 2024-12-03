@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.utils.consts import UserRole
 from src.app.common.utils.dependency import get_current_user, get_session
+from src.app.v1.auth.repository.oauth_repository import OAuthRepository
+from src.app.v1.auth.service.oauth_service import OAuthService
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.user.schema.requestDto import (
     CheckingPasswordRequest,
@@ -29,6 +31,8 @@ from src.app.v1.user.schema.responseDto import (
     UserInfoResponse,
 )
 from src.app.v1.user.service.user_service import UserService
+from fastapi.responses import RedirectResponse
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +40,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 user_repo = UserRepository()
 user_service = UserService(user_repo=user_repo)
-
+oauth_repo = OAuthRepository()
+oauth_service = OAuthService(oauth_repo=oauth_repo)
 
 @router.post("/email/send", response_model=MessageResponse)
 async def send_email_verification_code(
@@ -154,3 +159,18 @@ async def create_study_group(
         teacher_id=study_group.teacher_id,
         teacher_name=study_group.name,
     )
+
+
+# 로그인 엔드포인트
+@router.get("/login/{provider}")
+async def login(provider: str):
+    oauth_url = oauth_service.get_oauth_url(provider)
+    return RedirectResponse(oauth_url)
+
+# Callback 엔드포인트
+@router.get("/login/callback/{provider}")
+async def callback(provider: str, code: str):
+    token_data = oauth_service.get_access_token(provider, code)
+    access_token = token_data.get("access_token")
+    user_info = oauth_service.get_user_info(provider, access_token)
+    return {"provider": provider, "user_info": user_info}

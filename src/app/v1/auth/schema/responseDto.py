@@ -35,4 +35,3 @@ class UserInfoResponse(BaseModel):
     grade: int | None  # 학생 전용 (GradeNumber)
 
 
-from typing import Literal
