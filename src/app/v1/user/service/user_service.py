@@ -220,7 +220,7 @@ class UserService:
 
             jti = str(uuid.uuid4())
             access_token = create_access_token(
-                {"sub": str(user.id), "role": role, "jti": jti}, expires_delta=timedelta(minutes=15)  # 문자열로 변환된 role 사용
+                {"sub": str(user.id), "role": role, "jti": jti}, expires_delta=timedelta(minutes=45)  # 문자열로 변환된 role 사용
             )
             refresh_token = create_refresh_token({"sub": str(user.id)}, expires_delta=timedelta(days=7))
 
@@ -248,7 +248,7 @@ class UserService:
                 "access_token": access_token,
                 "refresh_token": refresh_token,  # 테스트 용
                 "token_type": "Bearer",
-                "expires_in": 900,
+                "expires_in": 45 * 60,
                 "role": role,
                 "first_login": first_login,  # 학생인 경우에만 의미 있는 값
                 "message": "로그인에 성공하였습니다.",
@@ -284,11 +284,11 @@ class UserService:
             jti = str(uuid.uuid4())
             access_token = create_access_token(
                 {"sub": str(user.id), "role": role, "jti": jti},
-                expires_delta=timedelta(minutes=15),
+                expires_delta=timedelta(minutes=45),
             )
 
             # Redis에 JTI 저장
-            expiry = 15 * 60
+            expiry = 45 * 60
             jti_key = get_redis_key_jti(jti)
             await save_to_redis(jti_key, "used", expiry)
 

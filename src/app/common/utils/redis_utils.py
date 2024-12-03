@@ -8,7 +8,7 @@ redis_client = get_redis_cache()
 
 # TTL 설정
 REFRESH_TOKEN_TTL = 7 * 24 * 3600  # 7일
-JTI_TTL = 15 * 60  # 15분
+JTI_TTL = 45 * 60  # 45분
 
 # 로거 설정
 logger = logging.getLogger(__name__)

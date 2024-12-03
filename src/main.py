@@ -88,7 +88,7 @@ app.include_router(comment_router)
 app.include_router(user_router)
 app.include_router(websocket_router)
 
-origins = ["http://localhost:5173", "https://localhost:5173"]
+origins = ["http://localhost:5173", "https://localhost:5173", "http://localhost:8000", "http://sam-test.kprolabs.space:8000"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -129,13 +129,13 @@ def run_check_script():
 
 
 # 임시 데이터 생성 -> 학생 5명, 선생님 50명, 그룹 10명씩
-from sqlalchemy.ext.asyncio import AsyncEngine
-from src.config.database.postgresql import Base, SessionLocal, engine
+# from sqlalchemy.ext.asyncio import AsyncEngine
+# from src.config.database.postgresql import Base, SessionLocal, engine
 
 # 학생 생성, 선생님 생성, 그룹 생성 임포트
-from generate_data.teacher import insert_teachers_async
-from generate_data.student import insert_students_async
-from generate_data.studygroup import group_students_with_teachers
+# from generate_data.teacher import insert_teachers_async
+# from generate_data.student import insert_students_async
+# from generate_data.studygroup import group_students_with_teachers
 
 
 # async def initialize_database(async_engine: AsyncEngine):
