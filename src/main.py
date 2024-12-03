@@ -92,7 +92,9 @@ origins = [
     "http://localhost:8000",
     "http://sam-test.kprolabs.space:8000",
     "http://kong.kprolabs.space:8000",
-    "158.180.84.161:8000",
+    "http://158.180.84.161:8000",
+    "ws://kong.kprolabs.space:8000",
+    "ws://158.180.84.161:8000",
 ]
 
 app.add_middleware(
