@@ -4,7 +4,7 @@ from odmantic import AIOEngine
 from src.app.v1.chat.entity.room import Room
 from src.app.v1.chat.repository.room_repository import RoomRepository
 from src.app.v1.chat.schema.room_request import RoomCreateRequest
-from src.app.v1.chat.schema.room_response import RoomCreateResponse
+from src.app.v1.chat.schema.room_response import RoomCreateResponse, RoomListResponse
 
 
 class RoomService:
@@ -49,6 +49,13 @@ class RoomService:
             return updated_room
         except ValueError as e:
             raise HTTPException(status_code=404, detail=str(e))
+
+    async def get_rooms_student(self, mongo: AIOEngine, user_id: int) -> list[RoomListResponse] | None:
+        student_id = await self.room_repository.user_exists(user_id)
+        if not student_id:
+            raise HTTPException(status_code=404, detail="학생 id를 찾을 수 없습니다.")
+
+        return await self.room_repository.get_room_list(mongo, user_id)
 
     async def get_room_messages(self, mongo: AIOEngine, room_id: int, user_id: str):
         pass
