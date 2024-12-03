@@ -76,6 +76,13 @@ async def consume_messages(app: FastAPI):
     except Exception as e:
         print(f"Error consuming kafka messages: {e}")
 
+health_router = APIRouter(prefix="/api/v1", tags=["Health"])
+
+
+@health_router.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
 
 app = FastAPI(debug=True, lifespan=lifespan)
 
@@ -85,6 +92,7 @@ app.include_router(chat_router)
 app.include_router(comment_router)
 app.include_router(user_router)
 app.include_router(websocket_router)
+app.include_router(health_router)
 
 origins = [
     "http://localhost:5173",
@@ -105,9 +113,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-api_router = APIRouter(prefix="/api/v1")
 
 
 def run_check_script():
