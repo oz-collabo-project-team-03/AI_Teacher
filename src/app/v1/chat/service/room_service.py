@@ -1,11 +1,10 @@
 from fastapi import HTTPException
 from odmantic import AIOEngine
 
-from generate_data import teacher
 from src.app.v1.chat.entity.room import Room
 from src.app.v1.chat.repository.room_repository import RoomRepository
 from src.app.v1.chat.schema.room_request import RoomCreateRequest
-from src.app.v1.chat.schema.room_response import RoomCreateResponse, RoomListResponse, RoomHelpResponse
+from src.app.v1.chat.schema.room_response import RoomCreateResponse, RoomListResponse, RoomHelpResponse, RoomHelpUpdateResponse
 
 
 class RoomService:
@@ -41,13 +40,18 @@ class RoomService:
 
         return await self.room_repository.delete_room_and_participant(room_id)
 
-    async def ask_help(self, room_id: int, user_id: int) -> Room:
+    async def ask_help(self, room_id: int, user_id: int) -> RoomHelpUpdateResponse:
         is_student = await self.room_repository.check_user_student(user_id)
         if not is_student:
             raise HTTPException(status_code=404, detail=f"해당 User ID : {user_id}는 Student가 아닙니다.")
         try:
-            updated_room = await self.room_repository.update_help_checked(room_id)
-            return updated_room
+            room = await self.room_repository.update_help_checked(room_id)
+            return RoomHelpUpdateResponse(
+                room_id=room.id,
+                title=room.title,
+                help_checked=room.help_checked,
+                created_at=room.created_at,
+            )
         except ValueError as e:
             raise HTTPException(status_code=404, detail=str(e))
 
