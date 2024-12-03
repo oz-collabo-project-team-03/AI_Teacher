@@ -1,10 +1,11 @@
 import logging
 
 from sqlalchemy.exc import NoResultFound, SQLAlchemyError
-from sqlalchemy import desc, func
+from sqlalchemy import func
 from sqlalchemy.future import select
 from odmantic import AIOEngine, query
 from fastapi import HTTPException
+from datetime import datetime
 from src.app.v1.chat.entity.message import Message
 from src.app.v1.chat.entity.participant import Participant
 from src.app.v1.chat.entity.room import Room
@@ -200,15 +201,16 @@ class RoomRepository:
                 for room in rooms:
                     # 각 방의 최신 메시지 조회
                     recent_messages = await mongo.find(Message, Message.room_id == room.id, sort=query.desc(Message.timestamp), limit=1)
-
                     if recent_messages:
                         message = recent_messages[0]
+                        date_object = datetime.strptime(message.timestamp, "%m-%d-%H-%M")
+                        formatted_date = date_object.strftime("%m-%d-%H-%M")
                         room_response = RoomListResponse(
                             room_id=room.id,
                             title=room.title,
                             help_checked=room.help_checked,
                             recent_message=message.content,
-                            recent_update=message.timestamp,
+                            recent_update=formatted_date,
                             user_id=user_id,
                         )
                     else:

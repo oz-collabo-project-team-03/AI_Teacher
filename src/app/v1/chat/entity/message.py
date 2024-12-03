@@ -16,7 +16,7 @@ class Message(Model):
     content: str
     user_type: str
     # FIXME: 현재 시간 적용
-    timestamp: datetime
+    timestamp: str
 
     model_config = {
         "collection": "chat",
