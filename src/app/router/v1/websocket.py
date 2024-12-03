@@ -49,7 +49,6 @@ async def websocket(
         while True:
             data = await websocket.receive_text()
 
-            # FIXME: 선생일 경우 Frontend에서 메시지를 입력할 수도 없게 만들기.
             if not await manager.can_send_message(room_id, user_type):
                 print("당신은 선생이라 메시지를 보낼 수 없습니다.")
                 continue

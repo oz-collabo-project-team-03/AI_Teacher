@@ -1,10 +1,11 @@
 from fastapi import HTTPException
 from odmantic import AIOEngine
 
+from generate_data import teacher
 from src.app.v1.chat.entity.room import Room
 from src.app.v1.chat.repository.room_repository import RoomRepository
 from src.app.v1.chat.schema.room_request import RoomCreateRequest
-from src.app.v1.chat.schema.room_response import RoomCreateResponse, RoomListResponse
+from src.app.v1.chat.schema.room_response import RoomCreateResponse, RoomListResponse, RoomHelpResponse
 
 
 class RoomService:
@@ -59,3 +60,15 @@ class RoomService:
 
     async def get_room_messages(self, mongo: AIOEngine, room_id: int, user_id: str):
         pass
+
+    # 관리 학생 목록 조회
+    async def get_students(self):
+        pass
+
+    # 헬프 목록 조회
+    async def room_help_list(self, mongo: AIOEngine, user_id: int) -> list[RoomHelpResponse] | None:
+        teacher_id = await self.room_repository.user_exists(user_id)
+        if not teacher_id:
+            raise HTTPException(status_code=404, detail="선생 id를 찾을 수 없습니다.")
+
+        return await self.room_repository.get_room_help_list(mongo, teacher_id)
