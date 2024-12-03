@@ -41,15 +41,26 @@ async def delete_room(
 @router.patch("/help/{room_id}/{user_id}")
 async def ask_help(
     room_id: int,
-    user_id: int,
     room_service: RoomService = Depends(get_room_service),
-    # current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
 ):
-    # user_id = current_user.get("user_id")
-    user_id = user_id
+    user_id = current_user.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=404, detail="User ID는 찾을 수 없습니다.")
     return await room_service.ask_help(room_id=room_id, user_id=int(user_id))
+
+
+# Get Rooms about Student
+@router.get("/students")
+async def get_rooms_student(
+    mongo: AIOEngine = Depends(mongo_db),
+    room_service: RoomService = Depends(get_room_service),
+    current_user: dict = Depends(get_current_user),
+):
+    user_id = current_user.get("user_id")
+    if user_id is None:
+        raise HTTPException(status_code=404, detail="User ID는 None일 수 없습니다.")
+    return await room_service.get_rooms_student(mongo, user_id=int(user_id))
 
 
 # Get Room

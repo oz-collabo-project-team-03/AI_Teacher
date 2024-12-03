@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 
 
@@ -7,3 +8,12 @@ class RoomCreateResponse(BaseModel):
     help_checked: bool
     student_id: int
     teacher_id: int
+
+
+class RoomListResponse(BaseModel):
+    room_id: int
+    title: str
+    help_checked: bool
+    recent_message: str | None
+    recent_update: datetime | None
+    user_id: int

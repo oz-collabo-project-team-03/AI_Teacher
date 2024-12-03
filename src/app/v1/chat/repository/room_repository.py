@@ -1,16 +1,20 @@
 import logging
 
 from sqlalchemy.exc import NoResultFound, SQLAlchemyError
-from sqlalchemy import func
+from sqlalchemy import desc, func
 from sqlalchemy.future import select
+from odmantic import AIOEngine, query
 from fastapi import HTTPException
+from src.app.v1.chat.entity.message import Message
 from src.app.v1.chat.entity.participant import Participant
 from src.app.v1.chat.entity.room import Room
 from src.app.v1.user.entity.student import Student
 from src.app.v1.user.entity.study_group import StudyGroup
 from src.app.v1.user.entity.user import User
+from src.app.v1.chat.entity.room import Room
 from src.config.database.postgresql import SessionLocal
 from src.app.common.utils.consts import UserRole
+from src.app.v1.chat.schema.room_response import RoomListResponse
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -175,6 +179,50 @@ class RoomRepository:
 
                 await session.commit()
                 return room
+
+            except SQLAlchemyError as e:
+                logger.error(f"Database error occurred while fetching teacher ID: {e}")
+                raise HTTPException(status_code=500, detail="DB 오류 발생")
+            except Exception as e:
+                logger.error(f"An unexpected error occurred: {e}")
+                raise HTTPException(status_code=500, detail="{e}")
+
+    @staticmethod
+    async def get_room_list(mongo: AIOEngine, user_id: int) -> list[RoomListResponse] | None:
+        async with SessionLocal() as session:
+            try:
+                # 사용자가 참여한 방 목록 조회
+                rooms = await session.execute(select(Room).join(Participant).where(Participant.student_id == user_id))
+                rooms = rooms.scalars().all()
+
+                result = []
+
+                for room in rooms:
+                    # 각 방의 최신 메시지 조회
+                    recent_messages = await mongo.find(Message, Message.room_id == room.id, sort=query.desc(Message.timestamp), limit=1)
+
+                    if recent_messages:
+                        message = recent_messages[0]
+                        room_response = RoomListResponse(
+                            room_id=room.id,
+                            title=room.title,
+                            help_checked=room.help_checked,
+                            recent_message=message.content,
+                            recent_update=message.timestamp,
+                            user_id=user_id,
+                        )
+                    else:
+                        room_response = RoomListResponse(
+                            room_id=room.id,
+                            title=room.title,
+                            help_checked=room.help_checked,
+                            recent_message=None,
+                            recent_update=None,
+                            user_id=user_id,
+                        )
+                    result.append(room_response)
+
+                return result
 
             except SQLAlchemyError as e:
                 logger.error(f"Database error occurred while fetching teacher ID: {e}")
