@@ -86,7 +86,14 @@ app.include_router(comment_router)
 app.include_router(user_router)
 app.include_router(websocket_router)
 
-origins = ["http://localhost:5173", "https://localhost:5173", "http://localhost:8000", "http://sam-test.kprolabs.space:8000"]
+origins = [
+    "http://localhost:5173",
+    "https://localhost:5173",
+    "http://localhost:8000",
+    "http://sam-test.kprolabs.space:8000",
+    "http://kong.kprolabs.space:8000",
+    "158.180.84.161:8000",
+]
 
 app.add_middleware(
     CORSMiddleware,
