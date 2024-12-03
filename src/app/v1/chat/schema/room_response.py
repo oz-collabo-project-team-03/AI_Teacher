@@ -16,3 +16,11 @@ class RoomListResponse(BaseModel):
     recent_message: str | None
     recent_update: str | None
     user_id: int
+
+class RoomHelpResponse(BaseModel):
+    room_id: int
+    student_id: int 
+    student_nickname: str | None
+    help_checked: bool
+    recent_message: str | None
+    recent_update: str | None

@@ -1,11 +1,12 @@
 import logging
 
 from sqlalchemy.exc import NoResultFound, SQLAlchemyError
-from sqlalchemy import func
+from sqlalchemy import func, and_
 from sqlalchemy.future import select
 from odmantic import AIOEngine, query
 from fastapi import HTTPException
 from datetime import datetime
+from src.app.common.models.tag import Tag
 from src.app.v1.chat.entity.message import Message
 from src.app.v1.chat.entity.participant import Participant
 from src.app.v1.chat.entity.room import Room
@@ -15,7 +16,7 @@ from src.app.v1.user.entity.user import User
 from src.app.v1.chat.entity.room import Room
 from src.config.database.postgresql import SessionLocal
 from src.app.common.utils.consts import UserRole
-from src.app.v1.chat.schema.room_response import RoomListResponse
+from src.app.v1.chat.schema.room_response import RoomListResponse, RoomHelpResponse
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -233,3 +234,64 @@ class RoomRepository:
             except Exception as e:
                 logger.error(f"An unexpected error occurred: {e}")
                 raise HTTPException(status_code=500, detail="{e}")
+
+    @staticmethod
+    async def get_room_help_list(mongo: AIOEngine, user_id: int) -> list[RoomHelpResponse] | None:
+        async with SessionLocal() as session:
+            try:
+                # teacher_user_id로 참여한 방 중 help_checked가 true인 방 목록 조회
+                rooms = await session.execute(
+                    select(Room).join(Participant).where(and_(Participant.teacher_id == user_id, Room.help_checked == True))
+                )
+                rooms = rooms.scalars().all()
+
+                result = []
+
+                for room in rooms:
+                    # 각 방의 최신 메시지 조회
+                    recent_messages = await mongo.find(Message, Message.room_id == room.id, sort=query.desc(Message.timestamp), limit=1)
+
+                    # 해당 방에 참여한 student_id 조회
+                    participants = await session.execute(select(Participant.student_id).where(Participant.room_id == room.id))
+                    student_ids = participants.scalars().all()
+
+                    # student_ids로 Tag와 User를 통해 nickname 조회
+                    nickname = None
+                    if student_ids:
+                        tags = await session.execute(select(Tag).join(User).where(User.id.in_(student_ids)))
+                        tag = tags.scalar_one_or_none()  # 첫 번째 닉네임만 가져옴
+                        if tag:
+                            nickname = tag.nickname
+
+                    if recent_messages:
+                        message = recent_messages[0]
+                        date_object = datetime.strptime(message.timestamp, "%Y-%m-%d %H시%M분")
+                        formatted_date = date_object.strftime("%Y-%m-%d %H시%M분")
+
+                        room_response = RoomHelpResponse(
+                            room_id=room.id,
+                            student_id=user_id,
+                            student_nickname=nickname,
+                            help_checked=room.help_checked,
+                            recent_message=message.content,
+                            recent_update=formatted_date,
+                        )
+                    else:
+                        room_response = RoomHelpResponse(
+                            room_id=room.id,
+                            student_id=user_id,
+                            student_nickname=nickname,
+                            help_checked=room.help_checked,
+                            recent_message=None,
+                            recent_update=None,
+                        )
+                    result.append(room_response)
+
+                return result if result else []
+
+            except SQLAlchemyError as e:
+                logger.error(f"Database error occurred while fetching teacher ID: {e}")
+                raise HTTPException(status_code=500, detail="DB 오류 발생")
+            except Exception as e:
+                logger.error(f"An unexpected error occurred: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
