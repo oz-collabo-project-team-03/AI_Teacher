@@ -29,7 +29,7 @@ class ChatService:
             "content": content,
             "message_type": "text",
             "user_type": user_type.value,
-            "timestamp": now.strftime("%m-%d-%H-%M"),
+            "timestamp": now.strftime("%Y-%m-%d %H시%M분"),
         }
 
     async def process_message(self, manager: "ConnectionManager", message: dict, room: Room, user_type: UserRole):
@@ -46,7 +46,7 @@ class ChatService:
                 "content": ai_response,
                 "message_type": "text",
                 "user_type": "ai",
-                "timestamp": now.strftime("%m-%d-%H-%M"),
+                "timestamp": now.strftime("%Y-%m-%d %H시%M분"),
             }
             await manager.send_message(ai_message)
             logger.info(f"Sending message: {message}")
