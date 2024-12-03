@@ -38,7 +38,7 @@ async def delete_room(
 
 
 # Ask Help
-@router.patch("/chat/help/{room_id}/{user_id}")
+@router.patch("/chat/help/{room_id}")
 async def ask_help(
     room_id: int,
     room_service: RoomService = Depends(get_room_service),
