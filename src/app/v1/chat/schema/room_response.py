@@ -15,5 +15,5 @@ class RoomListResponse(BaseModel):
     title: str
     help_checked: bool
     recent_message: str | None
-    recent_update: datetime | None
+    recent_update: datetime | str | None
     user_id: int

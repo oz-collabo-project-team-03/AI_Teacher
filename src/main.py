@@ -29,10 +29,8 @@ from src.app.router import auth_router, chat_router, comment_router, post_router
 load_dotenv()
 
 KAFKA_SERVER = os.environ.get("KAFKA_SERVER")
-
-AI_WELCOME_MESSAGE = "AI 선생님과의 대화가 시작되었습니다. 궁금한 점을 물어보세요!"
-CHAT_TOPIC = "chat"
-CONSUMER_GROUP = "chat_group"
+CHAT_TOPIC = os.environ.get("CHAT_TOPIC")
+CONSUMER_GROUP = os.environ.get("CONSUMER_GROUP")
 
 
 @asynccontextmanager
@@ -51,7 +49,7 @@ async def lifespan(app: FastAPI):
         CHAT_TOPIC,
         bootstrap_servers=KAFKA_SERVER,  # type: ignore
         value_deserializer=lambda x: json.loads(x.decode("utf-8")),
-        group_id="chat_group",
+        group_id=CONSUMER_GROUP,
         auto_offset_reset="latest",
     )
     await consumer.start()

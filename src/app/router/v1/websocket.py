@@ -1,18 +1,10 @@
 import logging
-from fastapi import APIRouter, WebSocket, Depends, HTTPException
-from datetime import datetime
+from fastapi import APIRouter, WebSocket, HTTPException
 
-from sqlalchemy.future import select
-from src.app.v1.chat.repository import room_repository
-from src.config.database.postgresql import SessionLocal
-from src.app.common.utils.dependency import get_current_user
 from src.app.v1.chat.repository.room_repository import RoomRepository
 from src.app.v1.chat.repository.chat_repository import ChatRepository
 from src.app.v1.chat.service.chat import ChatService
 from src.app.common.utils.websocket_manager import manager
-from src.app.common.factory import get_chat_service
-from src.app.common.utils.consts import UserRole
-from src.app.v1.chat.entity.room import Room
 
 
 logging.basicConfig(level=logging.INFO)
