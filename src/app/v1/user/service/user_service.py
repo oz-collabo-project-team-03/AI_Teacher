@@ -399,12 +399,12 @@ class UserService:
 
     async def update_user_info(self, user_id: int, role: str, update_data: dict, session: AsyncSession) -> dict:
         try:
-            # if "email" in update_data:
-            #     try:
-            #         validate_email(update_data["email"])
-            #     except EmailNotValidError as e:
-            #         logger.error(f"유효하지 않은 이메일 형식: {update_data['email']} - {str(e)}")
-            #         raise HTTPException(status_code=400, detail="유효하지 않은 이메일 형식입니다.")
+            if "email" in update_data:
+                try:
+                    validate_email(update_data["email"])
+                except EmailNotValidError as e:
+                    logger.error(f"유효하지 않은 이메일 형식: {update_data['email']} - {str(e)}")
+                    raise HTTPException(status_code=400, detail="유효하지 않은 이메일 형식입니다.")
 
             if "password" in update_data:
                 if not validate_password_complexity(update_data["password"]):
