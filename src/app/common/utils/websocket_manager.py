@@ -85,7 +85,7 @@ class ConnectionManager:
                 message = {
                     "type": "system",
                     "room_id": room_id,
-                    "user_id": "SYSTEM",
+                    "sender_id": "SYSTEM",
                     "content": "선생님과의 대화가 시작되었습니다." if room.help_checked else "AI 선생님과의 대화가 다시 시작되었습니다.",
                     "timestamp": datetime.now().isoformat(),
                 }
