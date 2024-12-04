@@ -71,12 +71,24 @@ class RoomService:
         if not is_room:
             raise HTTPException(status_code=404, detail="채팅방 id를 찾을 수 없습니다.")
 
+        profiles = await self.room_repository.get_profile_images(room_id)
+        if not profiles:
+            raise HTTPException(status_code=404, detail="Profile을 찾을 수 없습니다.")
+
+        student_profile, teacher_profile = profiles
+
         messages = await self.room_repository.find_messages_by_room(room_id, mongo, page, page_size)
         total_messages = await self.room_repository.count_messages(room_id, mongo)
         total_pages = (total_messages + page_size - 1) // page_size
 
         return RoomMessagesListResponse.from_room_and_messages(
-            room=is_room, messages=messages, page=page, total_pages=total_pages, total_messages=total_messages
+            room=is_room,
+            messages=messages,
+            student_profile=student_profile or "default_student_image.jpg",
+            teacher_profile=teacher_profile or "default_teacher_image.jpg",
+            page=page,
+            total_pages=total_pages,
+            total_messages=total_messages,
         )
 
     # 관리 학생 목록 조회

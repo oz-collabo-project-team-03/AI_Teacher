@@ -11,12 +11,3 @@ class Participant(Base):
     room_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("rooms.id"), nullable=False)
     user = relationship("User", back_populates="participant")
     room = relationship("Room", back_populates="participant")
-
-
-# class Participant(Base):
-#     __tablename__ = "participants"
-#     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-#     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
-#     room_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("rooms.id"), nullable=False)
-#     user = relationship("User", back_populates="participant")
-#     room = relationship("Room", back_populates="participant")
