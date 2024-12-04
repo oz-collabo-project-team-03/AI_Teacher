@@ -5,13 +5,13 @@ from src.app.v1.chat.repository.room_repository import RoomRepository
 from src.app.v1.chat.repository.chat_repository import ChatRepository
 from src.app.v1.chat.service.chat import ChatService
 from src.app.common.utils.websocket_manager import manager
+from src.app.common.utils.consts import UserRole
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Websocket"])
-AI_USER_ID = "AI"
 
 chat_service = ChatService()
 
@@ -53,8 +53,14 @@ async def websocket(
                 print("당신은 선생이라 메시지를 보낼 수 없습니다.")
                 continue
 
-            message = chat_service.create_message(room, user_id, user_type, data)
-            logger.info(f"Sending message: {message}")
+            message = await chat_service.create_message(room, user_id, user_type, data)
+            # help_checked가 True일 때 AI의 답변을 보내지 않도록 조건 추가
+            if room.help_checked and (user_type == UserRole.STUDENT or user_type == UserRole.TEACHER):
+                await manager.send_message(message)  # 선생과 학생 간의 대화 전송
+                logger.info(f"Sending message: {message}")
+                continue
+
+            # AI의 답변 처리
             await chat_service.process_message(manager, message, room, user_type)
 
     except HTTPException as he:

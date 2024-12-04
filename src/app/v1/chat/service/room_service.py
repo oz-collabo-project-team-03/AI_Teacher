@@ -1,10 +1,14 @@
 from fastapi import HTTPException
 from odmantic import AIOEngine
-
-from src.app.v1.chat.entity.room import Room
 from src.app.v1.chat.repository.room_repository import RoomRepository
 from src.app.v1.chat.schema.room_request import RoomCreateRequest
-from src.app.v1.chat.schema.room_response import RoomCreateResponse, RoomListResponse, RoomHelpResponse, RoomHelpUpdateResponse
+from src.app.v1.chat.schema.room_response import (
+    RoomCreateResponse,
+    RoomListResponse,
+    RoomHelpResponse,
+    RoomHelpUpdateResponse,
+    RoomMessagesListResponse,
+)
 
 
 class RoomService:
@@ -43,7 +47,7 @@ class RoomService:
     async def ask_help(self, room_id: int, user_id: int) -> RoomHelpUpdateResponse:
         is_student = await self.room_repository.check_user_student(user_id)
         if not is_student:
-            raise HTTPException(status_code=404, detail=f"해당 User ID : {user_id}는 Student가 아닙니다.")
+            raise HTTPException(status_code=404, detail=f"해당 User id : {user_id}는 Student가 아닙니다.")
         try:
             room = await self.room_repository.update_help_checked(room_id)
             return RoomHelpUpdateResponse(
@@ -62,11 +66,21 @@ class RoomService:
 
         return await self.room_repository.get_room_list(mongo, user_id)
 
-    async def get_room_messages(self, mongo: AIOEngine, room_id: int, user_id: str):
-        pass
+    async def get_room_messages(self, mongo: AIOEngine, page: int, page_size: int, room_id: int, user_id: str) -> RoomMessagesListResponse | None:
+        is_room = await self.room_repository.get_room(room_id=room_id)
+        if not is_room:
+            raise HTTPException(status_code=404, detail="채팅방 id를 찾을 수 없습니다.")
+
+        messages = await self.room_repository.find_messages_by_room(room_id, mongo, page, page_size)
+        total_messages = await self.room_repository.count_messages(room_id, mongo)
+        total_pages = (total_messages + page_size - 1) // page_size
+
+        return RoomMessagesListResponse.from_room_and_messages(
+            room=is_room, messages=messages, page=page, total_pages=total_pages, total_messages=total_messages
+        )
 
     # 관리 학생 목록 조회
-    async def get_students(self):
+    async def get_students(self, mongo: AIOEngine, room_id: int, user_id: int):
         pass
 
     # 헬프 목록 조회

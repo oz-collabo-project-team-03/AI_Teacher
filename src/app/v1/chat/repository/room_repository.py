@@ -190,6 +190,16 @@ class RoomRepository:
                 raise HTTPException(status_code=500, detail="{e}")
 
     @staticmethod
+    async def find_messages_by_room(room_id: int, mongo: AIOEngine, page: int = 1, page_size: int = 50) -> list[Message]:
+        skip = (page - 1) * page_size
+        messages = await mongo.find(Message, Message.room_id == room_id, sort=query.desc(Message.timestamp), skip=skip, limit=page_size)
+        return list(messages)
+
+    @staticmethod
+    async def count_messages(room_id: int, mongo: AIOEngine) -> int:
+        return await mongo.count(Message, Message.room_id == room_id)
+
+    @staticmethod
     async def get_room_list(mongo: AIOEngine, user_id: int) -> list[RoomListResponse] | None:
         async with SessionLocal() as session:
             try:

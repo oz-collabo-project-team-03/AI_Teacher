@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from odmantic import AIOEngine
 
 from src.app.common.factory import get_room_service, mongo_db
 from src.app.common.utils.dependency import get_current_user
-from src.app.v1.chat.entity.message import Message
 from src.app.v1.chat.schema.room_request import RoomCreateRequest
 from src.app.v1.chat.schema.room_response import RoomCreateResponse, RoomListResponse, RoomHelpResponse, RoomHelpUpdateResponse
 from src.app.v1.chat.service.room_service import RoomService
@@ -63,10 +62,12 @@ async def get_rooms_student(
     return await room_service.get_rooms_student(mongo, user_id=int(user_id))
 
 
-# Get Room
+# Get Room Messages
 @router.get("/chat/{room_id}/messages")
 async def get_room_messages(
     room_id: int,
+    page: int = Query(1, gt=0),
+    page_size: int = Query(50, gt=0, le=100),
     mongo: AIOEngine = Depends(mongo_db),
     room_service: RoomService = Depends(get_room_service),
     current_user: dict = Depends(get_current_user),
@@ -74,20 +75,7 @@ async def get_room_messages(
     user_id = current_user.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=404, detail="User ID는 None일 수 없습니다.")
-    return await room_service.get_room_messages(mongo, room_id=room_id, user_id=user_id)
-
-
-# 메시지 조회 엔드포인트
-@router.get("/chat/{room_id}/messages")
-async def read_message(
-    room_id: int,
-    mongo: AIOEngine = Depends(mongo_db),
-    current_user: dict = Depends(get_current_user),
-):
-    message = await mongo.find(Message, Message.room_id == room_id)
-    if message:
-        return message
-    return {"error": "Message not found"}
+    return await room_service.get_room_messages(mongo, page=page, page_size=page_size, room_id=room_id, user_id=user_id)
 
 
 # 관리 학생 목록 조회
