@@ -68,7 +68,7 @@ class RoomService:
 
         return await self.room_repository.get_room_list(mongo, user_id)
 
-    async def get_room_messages(self, mongo: AIOEngine, page: int, page_size: int, room_id: int, user_id: str) -> RoomMessagesListResponse | None:
+    async def get_room_messages(self, mongo: AIOEngine, page: int, page_size: int, room_id: int) -> RoomMessagesListResponse | None:
         is_room = await self.room_repository.get_room(room_id=room_id)
         if not is_room:
             raise HTTPException(status_code=404, detail="채팅방 id를 찾을 수 없습니다.")
@@ -76,6 +76,12 @@ class RoomService:
         profiles = await self.room_repository.get_profile_images(room_id)
         if not profiles:
             raise HTTPException(status_code=404, detail="Profile을 찾을 수 없습니다.")
+
+        nicknames = await self.room_repository.get_nicknames_by_room_id(room_id)
+        if not nicknames:
+            raise HTTPException(status_code=404, detail="닉네임을 찾을 수 없습니다.")
+        student_nickname = nicknames.get("student_nickname", "학생")
+        teacher_nickname = nicknames.get("teacher_nickname", "교사")
 
         student_profile, teacher_profile = profiles
 
@@ -89,6 +95,8 @@ class RoomService:
             ai_profile=AI_PROFILE,
             student_profile=student_profile or "default_student_image.jpg",
             teacher_profile=teacher_profile or "default_teacher_image.jpg",
+            student_nickname=student_nickname or "학생",
+            teacher_nickname=teacher_nickname or "선생님",
             page=page,
             total_pages=total_pages,
             total_messages=total_messages,

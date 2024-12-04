@@ -221,6 +221,49 @@ class RoomRepository:
                 raise HTTPException(status_code=500, detail="{e}")
 
     @staticmethod
+    async def get_nicknames_by_room_id(room_id: int) -> dict[str, str | None]:
+        async with SessionLocal() as session:
+            """
+            room_id를 기준으로 Participant에서 student_id와 teacher_id를 가져와,
+            해당 user에 연결된 Tag 엔티티에서 nickname을 조회합니다.
+
+            Returns:
+                dict[str, str | None]: 학생 및 교사의 닉네임.
+                    {
+                        "student_nickname": "학생 닉네임" or None,
+                        "teacher_nickname": "교사 닉네임" or None
+                    }
+            """
+            try:
+                # room_id로 Participant에서 student_id와 teacher_id 가져오기
+                participant = await session.execute(select(Participant.student_id, Participant.teacher_id).where(Participant.room_id == room_id))
+                participant = participant.one_or_none()
+
+                if not participant:
+                    return {"student_nickname": None, "teacher_nickname": None}
+
+                student_id, teacher_id = participant
+
+                # student_id로 Tag의 nickname 조회
+                student_tag = await session.execute(select(Tag.nickname).join(User).where(User.id == student_id))
+                student_nickname = student_tag.scalar_one_or_none()
+
+                # teacher_id로 Tag의 nickname 조회
+                teacher_tag = await session.execute(select(Tag.nickname).join(User).where(User.id == teacher_id))
+                teacher_nickname = teacher_tag.scalar_one_or_none()
+
+                return {
+                    "student_nickname": student_nickname,
+                    "teacher_nickname": teacher_nickname,
+                }
+            except SQLAlchemyError as e:
+                logger.error(f"Database error occurred: {e}")
+                raise HTTPException(status_code=500, detail="DB 오류 발생")
+            except Exception as e:
+                logger.error(f"An unexpected error occurred: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+
+    @staticmethod
     async def find_messages_by_room(room_id: int, mongo: AIOEngine, page: int = 1, page_size: int = 50) -> list[Message]:
         skip = (page - 1) * page_size
         messages = await mongo.find(Message, Message.room_id == room_id, sort=query.desc(Message.timestamp), skip=skip, limit=page_size)

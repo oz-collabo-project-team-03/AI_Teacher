@@ -75,7 +75,7 @@ async def get_room_messages(
     user_id = current_user.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=404, detail="User ID는 None일 수 없습니다.")
-    return await room_service.get_room_messages(mongo, page=page, page_size=page_size, room_id=room_id, user_id=user_id)
+    return await room_service.get_room_messages(mongo, page=page, page_size=page_size, room_id=room_id)
 
 
 # 관리 학생 목록 조회
