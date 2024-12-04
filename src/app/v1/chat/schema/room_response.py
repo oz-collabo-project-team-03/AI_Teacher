@@ -48,6 +48,7 @@ class RoomMessagesListResponse(BaseModel):
     room_id: int
     title: str
     help_checked: bool
+    ai_profile: str
     student_profile: str | None
     teacher_profile: str | None
     messages: list[RoomMessageResponse]
@@ -55,12 +56,13 @@ class RoomMessagesListResponse(BaseModel):
 
     @classmethod
     def from_room_and_messages(
-        cls, room: Room, messages: list[Message], student_profile: str, teacher_profile: str, page: int, total_pages: int, total_messages: int
+        cls, room: Room, messages: list[Message], ai_profile: str, student_profile: str, teacher_profile: str, page: int, total_pages: int, total_messages: int
     ) -> "RoomMessagesListResponse":
         return cls(
             room_id=room.id,
             title=room.title,
             help_checked=room.help_checked,
+            ai_profile=ai_profile,
             student_profile=student_profile,
             teacher_profile=teacher_profile,
             messages=[

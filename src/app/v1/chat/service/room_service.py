@@ -10,6 +10,8 @@ from src.app.v1.chat.schema.room_response import (
     RoomMessagesListResponse,
 )
 
+AI_PROFILE = "https://kr.object.ncloudstorage.com/backendsam/AI_Profile/AI.jpg"
+
 
 class RoomService:
 
@@ -84,6 +86,7 @@ class RoomService:
         return RoomMessagesListResponse.from_room_and_messages(
             room=is_room,
             messages=messages,
+            ai_profile=AI_PROFILE,
             student_profile=student_profile or "default_student_image.jpg",
             teacher_profile=teacher_profile or "default_teacher_image.jpg",
             page=page,
