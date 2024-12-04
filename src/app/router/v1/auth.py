@@ -172,8 +172,8 @@ async def login(provider: str):
     return RedirectResponse(oauth_url)
 
 
-# # Callback 엔드포인트
-@router.get("/login/callback/{provider}")
+# Callback 엔드포인트
+@router.post("/login/callback/{provider}")
 async def social_login_callback(
     provider: str,
     code: str,
