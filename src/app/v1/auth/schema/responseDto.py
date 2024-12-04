@@ -35,3 +35,12 @@ class UserInfoResponse(BaseModel):
     grade: int | None  # 학생 전용 (GradeNumber)
 
 
+class SocialLoginResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    external_id: str
+    access_token: str
+    refresh_token: str
+    token_type: str
+    expires_in: int
+    role: str | None
+    message: str

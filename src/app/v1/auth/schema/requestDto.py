@@ -111,3 +111,26 @@ class EmailVerifyRequest(BaseModel):
     code: str
     encrypted_code: str
     expiry_time: float
+
+# class SocialLoginBaseRegisterRequest(BaseModel):
+#     email: EmailStr
+#     phone: str
+
+class SocialLoginStudentRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    role: UserRole = UserRole.STUDENT
+    nickname: str
+    is_privacy_accepted: bool
+    school: str
+    grade: int
+    career_aspiration: str | None
+    interests: str | None
+
+class SocialLoginTeacherRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    role: UserRole = UserRole.TEACHER
+    nickname: str
+    is_privacy_accepted: bool
+    organization_name: str
+    organization_type: str
+    position: str
