@@ -261,7 +261,7 @@ class UserRepository:
             raise HTTPException(status_code=404, detail="교사 정보를 찾을 수 없습니다.")
 
         teacher_info = {
-            "email": user.email,
+
             "password": user.password,
             "phone": user.phone,
         }
@@ -281,7 +281,6 @@ class UserRepository:
             raise HTTPException(status_code=404, detail="학생 데이터를 찾을 수 없습니다.")
 
         student_info = {
-            "email": user.email,
             "password": user.password,
             "phone": user.phone,
             "school": student.school,

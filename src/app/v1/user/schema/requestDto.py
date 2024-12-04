@@ -72,7 +72,6 @@ class CheckingPasswordRequest(BaseModel):
 class UpdateUserInfoRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     role: str
-    email: EmailStr | None = None
     password: str | None = None
     password_confirm: str | None = None
     phone: str | None = None
@@ -102,3 +101,4 @@ class UpdateTeacherProfileRequest(BaseModel):
     organization_name: str | None = None
     organization_type: str | None = None
     position: str | None = Field(None, alias="organization_position")
+
