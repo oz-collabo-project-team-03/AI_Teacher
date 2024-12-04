@@ -21,6 +21,7 @@ class CommentResponse(BaseModel):
     post_id: int
     author_id: int
     author_nickname: str
+    profile_image: str | None = None
     content: str
     created_at: datetime
     tags: List[str] = []
