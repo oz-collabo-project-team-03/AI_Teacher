@@ -45,7 +45,6 @@ user_service = UserService(user_repo=user_repo)
 oauth_repo = OAuthRepository()
 oauth_service = OAuthService(oauth_repo=oauth_repo, user_repo=user_repo)
 
-
 @router.post("/email/send", response_model=MessageResponse)
 async def send_email_verification_code(
     payload: EmailRequest,
@@ -171,9 +170,8 @@ async def login(provider: str):
     print(f"Generated OAuth URL: {oauth_url}")
     return RedirectResponse(oauth_url)
 
-
 # # Callback 엔드포인트
-@router.get("/login/callback/{provider}")
+@router.post("/login/callback/{provider}")
 async def social_login_callback(
     provider: str,
     code: str,
@@ -191,9 +189,9 @@ async def social_login_callback(
 
 @router.patch("/social/info/", response_model=MessageResponse)
 async def additional_info(
-    payload: Union[SocialLoginStudentRequest, SocialLoginTeacherRequest],
-    current_user: dict = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
+        payload: Union[SocialLoginStudentRequest, SocialLoginTeacherRequest],
+        current_user: dict = Depends(get_current_user),
+        session: AsyncSession = Depends(get_session),
 ):
     user_id = current_user.get("user_id")
     if not user_id:
