@@ -137,7 +137,7 @@ async def update_user_info(
 
 
 # 모든 선생님 정보 조회
-@router.get("/groups/study", response_model=list[TeachersResponse])
+@router.get("/teachers", response_model=list[TeachersResponse])
 async def get_all_teachers(
     session: AsyncSession = Depends(get_session),
     current_user=Depends(get_current_user),
@@ -149,7 +149,7 @@ async def get_all_teachers(
 
 
 # 최초 로그인 시 선생님 선택 -> 스터디 그룹 형성
-@router.post("/study/groups", response_model=MessageResponse)
+@router.post("/groups/study", response_model=MessageResponse)
 async def create_study_group(
     study_group: StudyGroupRequest,
     session: AsyncSession = Depends(get_session),
@@ -170,13 +170,6 @@ async def login(provider: str):
     print(f"Generated OAuth URL: {oauth_url}")
     return RedirectResponse(oauth_url)
 
-
-# @router.get("/login/callback/{provider}")
-# async def callback(provider: str, code: str):
-#     token_data = oauth_service.get_access_token(provider, code)
-#     access_token = token_data.get("access_token")
-#     user_info = oauth_service.get_user_info(provider, access_token)
-#     return {"provider": provider, "user_info": user_info}
 # # Callback 엔드포인트
 @router.get("/login/callback/{provider}")
 async def social_login_callback(
