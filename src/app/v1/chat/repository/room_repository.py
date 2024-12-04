@@ -2,6 +2,7 @@ import logging
 
 from sqlalchemy.exc import NoResultFound, SQLAlchemyError
 from sqlalchemy import func, and_
+from sqlalchemy.orm import aliased
 from sqlalchemy.future import select
 from odmantic import AIOEngine, query
 from fastapi import HTTPException
@@ -181,6 +182,36 @@ class RoomRepository:
 
                 await session.commit()
                 return room
+
+            except SQLAlchemyError as e:
+                logger.error(f"Database error occurred while fetching teacher ID: {e}")
+                raise HTTPException(status_code=500, detail="DB 오류 발생")
+            except Exception as e:
+                logger.error(f"An unexpected error occurred: {e}")
+                raise HTTPException(status_code=500, detail="{e}")
+
+    @staticmethod
+    async def get_profile_images(room_id: int) -> tuple[str, str] | None:
+        async with SessionLocal() as session:
+            try:
+                # User 테이블에 별칭 생성
+                Student = aliased(User)
+                Teacher = aliased(User)
+                # room_id로 participant 조회하고 각각의 user 정보를 join
+                query = (
+                    select(Student.profile_image.label("student_profile"), Teacher.profile_image.label("teacher_profile"))
+                    .join(Participant, Student.id == Participant.student_id)
+                    .join(Teacher, Teacher.id == Participant.teacher_id, isouter=True)
+                    .where(Participant.room_id == room_id)
+                )
+
+                result = await session.execute(query)
+                profile_images = result.first()
+
+                if not profile_images:
+                    return None
+
+                return profile_images.student_profile, profile_images.teacher_profile
 
             except SQLAlchemyError as e:
                 logger.error(f"Database error occurred while fetching teacher ID: {e}")
