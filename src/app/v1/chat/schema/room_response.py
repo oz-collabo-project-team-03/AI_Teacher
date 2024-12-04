@@ -51,12 +51,24 @@ class RoomMessagesListResponse(BaseModel):
     ai_profile: str
     student_profile: str | None
     teacher_profile: str | None
+    student_nickname: str | None
+    teacher_nickname: str | None
     messages: list[RoomMessageResponse]
     pagination: PaginationResponse
 
     @classmethod
     def from_room_and_messages(
-        cls, room: Room, messages: list[Message], ai_profile: str, student_profile: str, teacher_profile: str, page: int, total_pages: int, total_messages: int
+        cls,
+        room: Room,
+        messages: list[Message],
+        ai_profile: str,
+        student_profile: str,
+        teacher_profile: str,
+        student_nickname: str,
+        teacher_nickname: str,
+        page: int,
+        total_pages: int,
+        total_messages: int,
     ) -> "RoomMessagesListResponse":
         return cls(
             room_id=room.id,
@@ -65,6 +77,8 @@ class RoomMessagesListResponse(BaseModel):
             ai_profile=ai_profile,
             student_profile=student_profile,
             teacher_profile=teacher_profile,
+            student_nickname=student_nickname,
+            teacher_nickname=teacher_nickname,
             messages=[
                 RoomMessageResponse(
                     sender_id=msg.sender_id, content=msg.content, timestamp=msg.timestamp, message_type=msg.message_type, user_type=msg.user_type
