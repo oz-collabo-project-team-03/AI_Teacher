@@ -8,6 +8,7 @@ from sqlalchemy.orm import joinedload
 from starlette import status
 from ulid import ulid  # type: ignore
 
+from src.app.v1.user.entity.study_group import StudyGroup
 from src.app.common.models.image import Image
 from src.app.common.models.tag import Tag
 from src.app.common.utils.consts import UserRole
@@ -91,8 +92,8 @@ class PostRepository:
                 teacher_query = (
                     select(User)
                     .options(joinedload(User.tag))  # Tag 정보를 즉시 로딩
-                    .join(Teacher, User.id == Teacher.user_id)
-                    .where(User.role == UserRole.TEACHER)
+                    .join(StudyGroup, StudyGroup.teacher_id == User.id)  # StudyGroup 테이블과 조인
+                    .where(StudyGroup.student_id == student.id)  # 현재 학생의 ID로 필터링
                     .limit(1)
                 )
                 teacher_result = await session.execute(teacher_query)
@@ -321,20 +322,19 @@ class PostRepository:
                 teacher_info = None
                 if post.is_with_teacher:
                     teacher_query = (
-                        select(User.profile_image, Tag.nickname, User.external_id)
-                        .join(Teacher, User.id == Teacher.user_id)
-                        .join(Tag, User.id == Tag.user_id)
-                        .where(User.role == UserRole.TEACHER)
+                        select(User)
+                        .options(joinedload(User.tag))  # Tag 정보를 즉시 로딩
+                        .join(StudyGroup, StudyGroup.teacher_id == User.id)  # StudyGroup 테이블과 조인
+                        .where(StudyGroup.student_id == student.id)  # 현재 학생의 ID로 필터링
                         .limit(1)
                     )
                     teacher_result = await session.execute(teacher_query)
-                    teacher_row = teacher_result.first()
-                    if teacher_row:
-                        profile_image, nickname, teacher_external_id = teacher_row
+                    teacher = teacher_result.unique().scalar_one_or_none()
+                    if teacher:
                         teacher_info = {
-                            "nickname": nickname,
-                            "user_id": teacher_external_id,
-                            "profile_image": profile_image,
+                            "nickname": teacher.tag.nickname if teacher.tag else None,
+                            "user_id": teacher.external_id,
+                            "profile_image": teacher.profile_image,
                         }
 
                 post_data = {
@@ -426,20 +426,19 @@ class PostRepository:
                 teacher_info = None
                 if post.is_with_teacher:
                     teacher_query = (
-                        select(User.profile_image, Tag.nickname, User.external_id)
-                        .join(Teacher, User.id == Teacher.user_id)
-                        .join(Tag, User.id == Tag.user_id)
-                        .where(User.role == UserRole.TEACHER)
+                        select(User)
+                        .options(joinedload(User.tag))  # Tag 정보를 즉시 로딩
+                        .join(StudyGroup, StudyGroup.teacher_id == User.id)  # StudyGroup 테이블과 조인
+                        .where(StudyGroup.student_id == student.id)  # 현재 학생의 ID로 필터링
                         .limit(1)
                     )
                     teacher_result = await session.execute(teacher_query)
-                    teacher_row = teacher_result.first()
-                    if teacher_row:
-                        profile_image, nickname, teacher_external_id = teacher_row
+                    teacher = teacher_result.unique().scalar_one_or_none()
+                    if teacher:
                         teacher_info = {
-                            "nickname": nickname,
-                            "user_id": teacher_external_id,
-                            "profile_image": profile_image,
+                            "nickname": teacher.tag.nickname if teacher.tag else None,
+                            "user_id": teacher.external_id,
+                            "profile_image": teacher.profile_image,
                         }
 
                 post_data = {
