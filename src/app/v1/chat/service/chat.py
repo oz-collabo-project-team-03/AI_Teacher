@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 from typing import TYPE_CHECKING
 from src.app.v1.chat.entity.room import Room
+from src.app.v1.chat.schema.websocket_response import MessageResponse
 
 from src.app.common.utils.consts import UserRole
 
@@ -18,9 +19,7 @@ if TYPE_CHECKING:
 
 class ChatService:
 
-    # def __init__(self, room_repository: RoomRepository):
-    #     self.room_repository = room_repository
-    def create_message(self, room: Room, user_id: int, user_type: UserRole, content: str) -> dict:
+    async def create_message(self, room: Room, user_id: int, user_type: UserRole, content: str) -> dict:
         now = datetime.now()
         return {
             "room_id": room.id,
