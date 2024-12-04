@@ -43,7 +43,12 @@ class CommentRepository:
         result = await session.execute(query)
         return result.scalars().all()
 
-    async def get_user_nickname(self, session: AsyncSession, user_id: int) -> str:
-        query = select(Tag.nickname).where(Tag.user_id == user_id)
+    async def get_user_info(self, session: AsyncSession, user_id: int) -> dict:
+        from src.app.v1.user.entity.user import User
+
+        query = select(Tag.nickname, User.profile_image).join(User, Tag.user_id == User.id).where(Tag.user_id == user_id)
         result = await session.execute(query)
-        return result.scalar() or "Anonymous"
+        row = result.first()
+        if row:
+            return {"nickname": row.nickname, "profile_image": row.profile_image}
+        return {"nickname": "Anonymous", "profile_image": None}

@@ -41,14 +41,14 @@ class CommentService:
 
             await self.comment_repository.create_comment(session, comment, tags)
 
-            # 닉네임 조회
-            author_nickname = await self.comment_repository.get_user_nickname(session, author_id)
+            # 닉네임 및 프로필 이미지 조회
+            user_info = await self.comment_repository.get_user_info(session, author_id)
 
         return CommentCreateResponse(
             comment_id=comment.id,
             post_id=comment.post_id,
             author_id=comment.author_id,
-            author_nickname=author_nickname,
+            author_nickname=user_info["nickname"],
             content=comment.content,
             created_at=comment.created_at,
             tags=payload.tags or [],
@@ -60,9 +60,9 @@ class CommentService:
         # 댓글 및 태그 데이터 조회
         comments_with_tags = await self.comment_repository.get_comments_by_post_id(session, post_id)
 
-        # 닉네임 매핑
+        # 사용자 정보 매핑
         author_ids = {row.Comment.author_id for row in comments_with_tags}
-        nickname_map = {author_id: await self.comment_repository.get_user_nickname(session, author_id) for author_id in author_ids}
+        user_info_map = {author_id: await self.comment_repository.get_user_info(session, author_id) for author_id in author_ids}
 
         # 부모 댓글과 대댓글 분리
         parent_comments = [row for row in comments_with_tags if row.Comment.parent_comment_id is None]
@@ -78,20 +78,37 @@ class CommentService:
                 parent_row.Comment.children.append(child_row)
 
         # Pydantic 모델로 변환
-        return [self._convert_to_response(row.Comment, row.tags or [], nickname_map) for row in parent_comments]
+        return [
+            self._convert_to_response(
+                row.Comment,
+                row.tags or [],
+                user_info_map[row.Comment.author_id]["nickname"],
+                user_info_map[row.Comment.author_id]["profile_image"],
+            )
+            for row in parent_comments
+        ]
 
-    def _convert_to_response(self, comment: Comment, tags: list[str], nickname_map: dict[int, str]) -> CommentResponse:
+    def _convert_to_response(self, comment: Comment, tags: list[str], author_nickname: str, profile_image: str | None) -> CommentResponse:
         return CommentResponse(
             comment_id=comment.id,
             post_id=comment.post_id,
             author_id=comment.author_id,
-            author_nickname=nickname_map.get(comment.author_id, "Anonymous"),
+            author_nickname=author_nickname,
+            profile_image=profile_image,
             content=comment.content,
             created_at=comment.created_at,
             tags=[tag for tag in tags if tag is not None],
             parent_comment_id=comment.parent_comment_id,
             recomment_count=comment.recomment_count,
-            children=[self._convert_to_response(child.Comment, child.tags or [], nickname_map) for child in getattr(comment, "children", [])],
+            children=[
+                self._convert_to_response(
+                    child.Comment,
+                    child.tags or [],
+                    author_nickname,
+                    profile_image,
+                )
+                for child in getattr(comment, "children", [])
+            ],
         )
 
     async def delete_comment(self, session: AsyncSession, comment_id: int, user_id: int):
