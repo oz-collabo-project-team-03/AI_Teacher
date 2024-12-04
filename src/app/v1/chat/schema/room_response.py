@@ -2,6 +2,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 from src.app.v1.chat.entity.room import Room
 from src.app.v1.chat.entity.message import Message
+from src.app.common.utils.consts import MessageType
 
 
 class RoomCreateResponse(BaseModel):
@@ -38,6 +39,8 @@ class RoomMessageResponse(BaseModel):
     sender_id: int
     content: str
     timestamp: str
+    message_type: MessageType
+    user_type: str
 
 
 class RoomMessagesListResponse(BaseModel):
@@ -56,7 +59,10 @@ class RoomMessagesListResponse(BaseModel):
             room_id=room.id,
             title=room.title,
             help_checked=room.help_checked,
-            messages=[RoomMessageResponse(sender_id=msg.sender_id, content=msg.content, timestamp=msg.timestamp) for msg in messages],
+            messages=[
+                RoomMessageResponse(sender_id=msg.sender_id, content=msg.content, timestamp=msg.timestamp, message_type=msg.message_type, user_type=msg.user_type)
+                for msg in messages
+            ],
             pagination=PaginationResponse(current_page=page, total_pages=total_pages, total_messages=total_messages),
         )
 
