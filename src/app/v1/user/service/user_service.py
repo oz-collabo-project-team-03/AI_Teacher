@@ -257,7 +257,6 @@ class UserService:
             print(f"HTTPException 발생: {e}")
             raise e
 
-
     async def refresh_access_token(self, refresh_token: str, session: AsyncSession):
         if not refresh_token:
             raise HTTPException(status_code=401, detail="Refresh Token이 제공되지 않았습니다.")
@@ -304,7 +303,6 @@ class UserService:
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Refresh Token 유효하지 않습니다.")
 
-
     async def logout_user(self, access_token: str, response: Response):
         try:
             payload = verify_access_token(access_token)
@@ -336,7 +334,6 @@ class UserService:
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Access Token이 만료되었습니다.")
 
-
     async def find_email_by_phone(self, phone: str, session: AsyncSession) -> dict:
         if not phone:
             raise HTTPException(status_code=400, detail="유효하지 않은 전화번호입니다.")
@@ -352,8 +349,6 @@ class UserService:
         except HTTPException as e:
             logger.error(f"이메일 검색 실패: {e.detail}")
             raise
-
-
 
     def _mask_email(self, email: str) -> str:
         try:
@@ -378,8 +373,6 @@ class UserService:
             "temp_password": temp_password,
         }
 
-
-
     async def checking_password(self, user_id: int, password: str, session: AsyncSession) -> dict:
         try:
             user = await self.user_repo.get_user_by_id(session, user_id)
@@ -395,7 +388,6 @@ class UserService:
 
         except HTTPException as e:
             raise
-
 
     async def update_user_info(self, user_id: int, role: str, update_data: dict, session: AsyncSession) -> dict:
         try:
@@ -439,7 +431,6 @@ class UserService:
         except HTTPException as e:
             logger.error(f"사용자 정보 업데이트 실패: {e.detail}")
             raise
-
 
     async def get_all_teachers_info(self, session: AsyncSession) -> list[dict]:
         try:
@@ -567,11 +558,15 @@ class UserService:
         posts = await self.user_repo.get_posts_by_user(user_id, session)
         posts_data = [
             PostResponse(
-                post_id=post.external_id,
-                post_image=post.images[0].image_path if post.images else None,
+                post_id=post_datas["external_id"],
+                post_image=post_datas["images"][0] if post_datas["images"] else None,
             )
-            for post in posts
+            for post_datas in posts.values()
         ]
+
+        # like_count와 comment_count 계산
+        like_count = sum(post_data['post'].like_count for post_data in posts.values())  # 'post' 객체에서 like_count 접근
+        comment_count = sum(post_data['post'].comment_count for post_data in posts.values())  # 'post' 객체에서 comment_count 접근
 
         common_data = CommonProfileResponse(
             role=role,
@@ -579,8 +574,8 @@ class UserService:
             nickname=user.tag.nickname,
             profile_image=user.profile_image,
             post_count=len(posts_data),
-            like_count=sum(post.like_count for post in posts),
-            comment_count=sum(post.comment_count for post in posts),
+            like_count=like_count,
+            comment_count=comment_count,
         )
 
         logger.debug(f"Common data: {common_data}")
@@ -619,8 +614,6 @@ class UserService:
         else:
             raise HTTPException(status_code=400, detail="올바르지 않은 역할입니다.")
 
-
-
     # 학생 프로필 편집
     async def update_student_profile(self, user_id: int, update_data: dict, session: AsyncSession) -> dict:
         print(f"Entering update_student_profile for user_id={user_id}")
@@ -645,6 +638,7 @@ class UserService:
         except Exception as e:
             print(f"Unexpected error during profile update for user_id={user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="프로필 업데이트 중 알 수 없는 오류가 발생했습니다.")
+
     # 교사 프로필 업데이트
     async def update_teacher_profile(self, user_id: int, profile_data: dict, session: AsyncSession) -> dict:
         try:
@@ -653,7 +647,6 @@ class UserService:
                 if not user or user.role != UserRole.TEACHER:
                     print(f"Invalid role or user not found for user_id={user_id}")
                     raise HTTPException(status_code=403, detail="선생님만 프로필을 편집할 수 있습니다.")
-
 
                 updated = await self.user_repo.update_teacher_profile(user_id, profile_data, session)
                 if not updated:
