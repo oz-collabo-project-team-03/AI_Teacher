@@ -102,12 +102,12 @@ class PostRepository:
                     teacher_info = {
                         "nickname": teacher.tag.nickname if teacher.tag else None,
                         "profile_image": teacher.profile_image,
-                        "user_id": teacher.external_id,
+                        "user_id": teacher.id,
                     }
 
             response = {
                 "nickname": user.tag.nickname if user.tag else None,
-                "user_id": user.external_id,
+                "user_id": teacher.id,
                 "profile_image": user.profile_image,
                 "career_aspiration": student.career_aspiration,
                 "interest": student.interest,
@@ -333,13 +333,13 @@ class PostRepository:
                     if teacher:
                         teacher_info = {
                             "nickname": teacher.tag.nickname if teacher.tag else None,
-                            "user_id": teacher.external_id,
+                            "user_id": teacher.id,
                             "profile_image": teacher.profile_image,
                         }
 
                 post_data = {
                     "nickname": tag.nickname,
-                    "user_id": user.id,
+                    "user_id": teacher.id,
                     "profile_image": user.profile_image,
                     "career_aspiration": student.career_aspiration,
                     "interest": student.interest,
@@ -437,13 +437,13 @@ class PostRepository:
                     if teacher:
                         teacher_info = {
                             "nickname": teacher.tag.nickname if teacher.tag else None,
-                            "user_id": teacher.external_id,
+                            "user_id": teacher.id,
                             "profile_image": teacher.profile_image,
                         }
 
                 post_data = {
                     "nickname": tag.nickname,
-                    "user_id": user.id,
+                    "user_id": teacher.id,
                     "profile_image": user.profile_image,
                     "career_aspiration": student.career_aspiration,
                     "interest": student.interest,
