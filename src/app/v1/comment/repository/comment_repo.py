@@ -2,6 +2,7 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from src.app.v1.user.entity.user import User
 from src.app.common.models.tag import Tag
 from src.app.v1.comment.entity.comment import Comment
 from src.app.v1.comment.entity.comment_tag import CommentTag
@@ -26,12 +27,17 @@ class CommentRepository:
         query = (
             select(
                 Comment,
-                func.array_agg(Tag.nickname).label("tags"),  # 태그 닉네임들을 배열로 묶음
+                func.array_agg(Tag.nickname).label("tags"),
+                User.external_id.label("user_external_id"),
+                User.profile_image,
+                Post.external_id.label("post_external_id"),  # Post의 external_id 추가
             )
-            .join(CommentTag, Comment.id == CommentTag.comment_id, isouter=True)  # CommentTag와 JOIN
-            .join(Tag, CommentTag.tag_id == Tag.id, isouter=True)  # Tag와 JOIN
+            .join(CommentTag, Comment.id == CommentTag.comment_id, isouter=True)
+            .join(Tag, CommentTag.tag_id == Tag.id, isouter=True)
+            .join(User, Comment.author_id == User.id)
+            .join(Post, Comment.post_id == Post.id)  # Post와 JOIN
             .where(Comment.post_id == post_id)
-            .group_by(Comment.id)  # Comment 별로 태그를 그룹화
+            .group_by(Comment.id, User.external_id, User.profile_image, Post.external_id)
             .order_by(Comment.created_at)
         )
 
@@ -54,9 +60,14 @@ class CommentRepository:
     async def get_user_info(self, session: AsyncSession, user_id: int) -> dict:
         from src.app.v1.user.entity.user import User
 
-        query = select(Tag.nickname, User.profile_image).join(User, Tag.user_id == User.id).where(Tag.user_id == user_id)
+        query = select(Tag.nickname, User.profile_image, User.external_id).join(User, Tag.user_id == User.id).where(
+            Tag.user_id == user_id)
         result = await session.execute(query)
         row = result.first()
         if row:
-            return {"nickname": row.nickname, "profile_image": row.profile_image}
-        return {"nickname": "Anonymous", "profile_image": None}
+            return {
+                "nickname": row.nickname,
+                "profile_image": row.profile_image,
+                "user_id": row.external_id,  # external_id 추가
+            }
+        return {"nickname": "Anonymous", "profile_image": None, "user_id": None}

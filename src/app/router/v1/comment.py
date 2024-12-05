@@ -21,12 +21,11 @@ async def create_comment(
     current_user: dict = Depends(get_current_user),
 ):
     try:
-        # external_id를 실제 post_id로 변환
         actual_post_id = await comment_service.get_post_id_from_external_id(session, post_id)
         return await comment_service.create_comment_with_tags(
             session=session,
             post_id=actual_post_id,
-            author_id=int(current_user["user_id"]),
+            author_id=current_user["user_id"],
             payload=payload,
         )
     except ValueError as e:
@@ -39,7 +38,6 @@ async def get_comments(
     session: AsyncSession = Depends(get_session),
 ):
     try:
-
         actual_post_id = await comment_service.get_post_id_from_external_id(session, post_id)
         comments = await comment_service.get_comments_with_tags(session, actual_post_id)
         return {"comments": comments, "total_count": len(comments)}
@@ -54,6 +52,6 @@ async def delete_comment(
     current_user: dict = Depends(get_current_user),
 ):
     try:
-        await comment_service.delete_comment(session, comment_id, int(current_user["user_id"]))
+        await comment_service.delete_comment(session, comment_id, current_user["user_id"])
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

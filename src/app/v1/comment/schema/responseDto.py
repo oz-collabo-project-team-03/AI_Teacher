@@ -6,8 +6,8 @@ from pydantic import BaseModel
 
 class CommentCreateResponse(BaseModel):
     comment_id: int
-    post_id: int
-    author_id: int
+    post_id: str
+    user_id: str
     author_nickname: str
     content: str
     created_at: datetime
@@ -18,8 +18,8 @@ class CommentCreateResponse(BaseModel):
 
 class CommentResponse(BaseModel):
     comment_id: int
-    post_id: int
-    author_id: int
+    post_id: str
+    user_id: str
     author_nickname: str
     profile_image: str | None = None
     content: str

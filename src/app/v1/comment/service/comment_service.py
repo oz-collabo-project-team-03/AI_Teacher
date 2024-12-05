@@ -1,9 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy import select
 from src.app.v1.comment.entity.comment import Comment
 from src.app.v1.comment.repository.comment_repo import CommentRepository
 from src.app.v1.comment.schema.requestDto import CommentCreateRequest
 from src.app.v1.comment.schema.responseDto import CommentCreateResponse, CommentResponse
+from src.app.v1.post.entity.post import Post
 
 
 class CommentService:
@@ -18,8 +19,9 @@ class CommentService:
         return post_id
 
     async def create_comment_with_tags(
-        self, session: AsyncSession, post_id: int, author_id: int, payload: CommentCreateRequest
+            self, session: AsyncSession, post_id: int, author_id: int, payload: CommentCreateRequest
     ) -> CommentCreateResponse:
+        """댓글 생성"""
         # 부모 댓글 유효성 검사
         parent_comment = None
         if payload.parent_comment_id:
@@ -50,12 +52,18 @@ class CommentService:
         # 닉네임 및 프로필 이미지 조회
         user_info = await self.comment_repository.get_user_info(session, author_id)
 
+        # `post_id`를 `external_id`로 변환
+        post_external_id_query = select(Post.external_id).where(Post.id == comment.post_id)
+        post_external_id_result = await session.execute(post_external_id_query)
+        post_external_id = post_external_id_result.scalar_one()
+
         await session.commit()
 
+        # 응답 생성
         return CommentCreateResponse(
             comment_id=comment.id,
-            post_id=comment.post_id,
-            author_id=comment.author_id,
+            post_id=post_external_id,  # `external_id` 사용
+            user_id=user_info["user_id"],
             author_nickname=user_info["nickname"],
             content=comment.content,
             created_at=comment.created_at,
@@ -65,18 +73,18 @@ class CommentService:
         )
 
     async def get_comments_with_tags(self, session: AsyncSession, post_id: int):
-        # 댓글 및 태그 데이터 조회
+        """댓글 조회"""
         comments_with_tags = await self.comment_repository.get_comments_by_post_id(session, post_id)
 
-        # 사용자 정보 매핑
         author_ids = {row.Comment.author_id for row in comments_with_tags}
-        user_info_map = {author_id: await self.comment_repository.get_user_info(session, author_id) for author_id in author_ids}
+        user_info_map = {
+            author_id: await self.comment_repository.get_user_info(session, author_id)
+            for author_id in author_ids
+        }
 
-        # 부모 댓글과 대댓글 분리
         parent_comments = [row for row in comments_with_tags if row.Comment.parent_comment_id is None]
         child_comments = [row for row in comments_with_tags if row.Comment.parent_comment_id is not None]
 
-        # 부모 댓글 ID 맵핑
         parent_map = {row.Comment.id: row for row in parent_comments}
         for child_row in child_comments:
             parent_row = parent_map.get(child_row.Comment.parent_comment_id)
@@ -85,22 +93,32 @@ class CommentService:
                     parent_row.Comment.children = []
                 parent_row.Comment.children.append(child_row)
 
-        # Pydantic 모델로 변환
         return [
             self._convert_to_response(
                 row.Comment,
                 row.tags or [],
+                row.post_external_id,  # Post의 external_id를 응답에 포함
+                user_info_map[row.Comment.author_id]["user_id"],
                 user_info_map[row.Comment.author_id]["nickname"],
                 user_info_map[row.Comment.author_id]["profile_image"],
             )
             for row in parent_comments
         ]
 
-    def _convert_to_response(self, comment: Comment, tags: list[str], author_nickname: str, profile_image: str | None) -> CommentResponse:
+    def _convert_to_response(
+            self,
+            comment: Comment,
+            tags: list[str],
+            post_external_id: str,
+            user_id: str,
+            author_nickname: str,
+            profile_image: str | None,
+    ) -> CommentResponse:
+        """댓글 데이터 변환"""
         return CommentResponse(
             comment_id=comment.id,
-            post_id=comment.post_id,
-            author_id=comment.author_id,
+            post_id=post_external_id,  # post_external_id를 사용
+            user_id=user_id,
             author_nickname=author_nickname,
             profile_image=profile_image,
             content=comment.content,
@@ -112,6 +130,8 @@ class CommentService:
                 self._convert_to_response(
                     child.Comment,
                     child.tags or [],
+                    post_external_id,  # 동일한 post_external_id를 자식에도 사용
+                    user_id,
                     author_nickname,
                     profile_image,
                 )
@@ -120,6 +140,7 @@ class CommentService:
         )
 
     async def delete_comment(self, session: AsyncSession, comment_id: int, user_id: int):
+        """댓글 삭제"""
         async with session.begin():
             comment = await self.comment_repository.get_comment(session, comment_id)
             if not comment:
