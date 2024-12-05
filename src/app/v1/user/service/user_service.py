@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.app.common.models.tag import Tag
 from src.app.common.utils.consts import UserRole
 from src.app.common.utils.image import NCPStorageService  # type: ignore
 from src.app.common.utils.redis_utils import (
@@ -40,6 +41,9 @@ from src.app.common.utils.verify_password import (
     validate_temp_password_complexity,
     verify_password,
 )
+from src.app.v1.user.entity.organization import Organization
+from src.app.v1.user.entity.student import Student
+from src.app.v1.user.entity.teacher import Teacher
 from src.app.v1.user.entity.user import User
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.user.schema.requestDto import (
@@ -619,66 +623,75 @@ class UserService:
         else:
             raise HTTPException(status_code=400, detail="올바르지 않은 역할입니다.")
 
-    # 학생 프로필 편집
     async def update_student_profile(self, user_id: int, update_data: dict, session: AsyncSession) -> dict:
-        print(f"Entering update_student_profile for user_id={user_id}")
-        print(f"Update data: {update_data}")
-        try:
-            # 트랜잭션 시작
-            async with session.begin():
-                user = await self.user_repo.get_user_with_profile(user_id, session)
-                if not user or user.role != UserRole.STUDENT:
-                    print(f"Invalid role or user not found for user_id={user_id}")
-                    raise HTTPException(status_code=403, detail="학생만 프로필을 편집할 수 있습니다.")
+        user = await self.user_repo.get_students_profile(user_id, session)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
-                if "profile_image" in update_data:
-                    upload_file = update_data["profile_image"]
-                    uploaded_url = self.storage_service.upload_images([upload_file])[0]
-                    if not uploaded_url:
-                        raise HTTPException(status_code=400, detail="프로필 이미지 업로드에 실패했습니다.")
-                    update_data["profile_image_url"] = uploaded_url
+        if "nickname" in update_data:
+            if user.tag:
+                user.tag.nickname = update_data["nickname"]
+            else:
+                new_tag = Tag(user_id=user.id, nickname=update_data["nickname"])
+                session.add(new_tag)
 
-                # 업데이트 처리
-                updated = await self.user_repo.update_student_profile(user_id, update_data, session)
-                if not updated:
-                    print(f"Profile update failed for user_id={user_id}")
-                    raise HTTPException(status_code=400, detail="프로필 업데이트에 실패했습니다.")
+        if "profile_image" in update_data:
+            user.profile_image = update_data["profile_image"]
 
-            print(f"Student profile updated successfully for user_id={user_id}")
-            return {"message": "학생 프로필 정보가 성공적으로 변경되었습니다."}
+        if user.student:
+            student = user.student
+        else:
+            student = Student(user_id=user.id)
+            session.add(student)
 
-        except Exception as e:
-            print(f"Unexpected error during profile update for user_id={user_id}: {str(e)}")
-            raise HTTPException(status_code=500, detail="프로필 업데이트 중 알 수 없는 오류가 발생했습니다.")
+        if "career_aspiration" in update_data:
+            student.career_aspiration = update_data["career_aspiration"]
+        if "interest" in update_data:
+            student.interest = update_data["interest"]
+        if "description" in update_data:
+            student.description = update_data["description"]
+
+        await session.commit()
+
+        return {"message": "학생 프로필이 성공적으로 업데이트되었습니다."}
 
     # 교사 프로필 업데이트
-    async def update_teacher_profile(self, user_id: int, profile_data: dict, session: AsyncSession) -> dict:
-        try:
-            async with session.begin():
-                user = await self.user_repo.get_user_with_profile(user_id, session)
-                if not user or user.role != UserRole.TEACHER:
-                    print(f"Invalid role or user not found for user_id={user_id}")
-                    raise HTTPException(status_code=403, detail="선생님만 프로필을 편집할 수 있습니다.")
+    async def update_teacher_profile(self, user_id: int, update_data: dict, session: AsyncSession) -> dict:
+        user = await self.user_repo.get_teachers_profile(user_id, session)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
-                # 프로필 이미지 업로드 처리
-                if "profile_image" in profile_data:
-                    upload_file = profile_data["profile_image"]
-                    uploaded_url = self.storage_service.upload_images([upload_file])[0]
-                    if not uploaded_url:
-                        raise HTTPException(status_code=400, detail="프로필 이미지 업로드에 실패했습니다.")
-                    profile_data["profile_image_url"] = uploaded_url
+        if "nickname" in update_data:
+            if user.tag:
+                user.tag.nickname = update_data["nickname"]
+            else:
+                new_tag = Tag(user_id=user.id, nickname=update_data["nickname"])
+                session.add(new_tag)
 
-                updated = await self.user_repo.update_teacher_profile(user_id, profile_data, session)
-                if not updated:
-                    print(f"Profile update failed for user_id={user_id}")
-                    raise HTTPException(status_code=400, detail="프로필 업데이트에 실패했습니다.")
+        if "profile_image" in update_data:
+            user.profile_image = update_data["profile_image"]
 
-            print(f"Teacher profile updated successfully for user_id={user_id}")
-            return {"message": "선생님 프로필 정보가 성공적으로 변경되었습니다."}
+        if user.teacher and user.teacher.organization:
+            organization = user.teacher.organization
+        else:
+            if not user.teacher:
+                teacher = Teacher(user_id=user.id)
+                session.add(teacher)
+                user.teacher = teacher
 
-        except Exception as e:
-            print(f"Unexpected error during profile update for user_id={user_id}: {str(e)}")
-            raise HTTPException(status_code=500, detail="프로필 업데이트 중 알 수 없는 오류가 발생했습니다.")
+            organization = Organization(teacher=user.teacher)
+            session.add(organization)
+
+        if "organization_name" in update_data:
+            organization.name = update_data["organization_name"]
+        if "organization_type" in update_data:
+            organization.type = update_data["organization_type"]
+        if "organization_position" in update_data:
+            organization.position = update_data["organization_position"]
+
+        await session.commit()
+
+        return {"message": "선생님 프로필이 성공적으로 업데이트되었습니다."}
 
     # 탈퇴하기 -> deactivated_at 30일 후 삭제
     async def deactivate_user_service(self, user_id, session: AsyncSession) -> dict:
