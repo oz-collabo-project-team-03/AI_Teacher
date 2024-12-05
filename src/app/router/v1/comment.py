@@ -15,15 +15,17 @@ comment_service = CommentService()
 
 @router.post("/write/{post_id}", response_model=CommentCreateResponse)
 async def create_comment(
-    post_id: int,
+    post_id: str,
     payload: CommentCreateRequest,
     session: AsyncSession = Depends(get_session),
     current_user: dict = Depends(get_current_user),
 ):
     try:
+        # external_id를 실제 post_id로 변환
+        actual_post_id = await comment_service.get_post_id_from_external_id(session, post_id)
         return await comment_service.create_comment_with_tags(
             session=session,
-            post_id=post_id,
+            post_id=actual_post_id,
             author_id=int(current_user["user_id"]),
             payload=payload,
         )
@@ -33,11 +35,16 @@ async def create_comment(
 
 @router.get("/{post_id}", response_model=CommentListResponse)
 async def get_comments(
-    post_id: int,
+    post_id: str,
     session: AsyncSession = Depends(get_session),
 ):
-    comments = await comment_service.get_comments_with_tags(session, post_id)
-    return {"comments": comments, "total_count": len(comments)}
+    try:
+
+        actual_post_id = await comment_service.get_post_id_from_external_id(session, post_id)
+        comments = await comment_service.get_comments_with_tags(session, actual_post_id)
+        return {"comments": comments, "total_count": len(comments)}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.delete("/{comment_id}", status_code=204)

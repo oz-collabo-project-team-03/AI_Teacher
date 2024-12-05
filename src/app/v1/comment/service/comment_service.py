@@ -10,39 +10,47 @@ class CommentService:
     def __init__(self):
         self.comment_repository = CommentRepository()
 
+    async def get_post_id_from_external_id(self, session: AsyncSession, external_id: str) -> int:
+        """external_id를 실제 post_id로 변환"""
+        post_id = await self.comment_repository.get_post_id_from_external_id(session, external_id)
+        if not post_id:
+            raise ValueError("해당 external_id에 해당하는 게시글이 없습니다.")
+        return post_id
+
     async def create_comment_with_tags(
         self, session: AsyncSession, post_id: int, author_id: int, payload: CommentCreateRequest
     ) -> CommentCreateResponse:
-        async with session.begin():
-            # 부모 댓글 유효성 검사
-            parent_comment = None
-            if payload.parent_comment_id:
-                parent_comment = await self.comment_repository.get_comment(session, payload.parent_comment_id)
-                if not parent_comment:
-                    raise ValueError("대댓글 대상 댓글을 찾을 수 없습니다.")
-                if parent_comment.post_id != post_id:
-                    raise ValueError("댓글은 동일한 게시글에만 대댓글로 작성할 수 있습니다.")
-                parent_comment.recomment_count += 1
-                session.add(parent_comment)
+        # 부모 댓글 유효성 검사
+        parent_comment = None
+        if payload.parent_comment_id:
+            parent_comment = await self.comment_repository.get_comment(session, payload.parent_comment_id)
+            if not parent_comment:
+                raise ValueError("대댓글 대상 댓글을 찾을 수 없습니다.")
+            if parent_comment.post_id != post_id:
+                raise ValueError("댓글은 동일한 게시글에만 대댓글로 작성할 수 있습니다.")
+            parent_comment.recomment_count += 1
+            session.add(parent_comment)
 
-            # 댓글 생성
-            comment = Comment(
-                post_id=post_id,
-                author_id=author_id,
-                content=payload.content,
-                parent_comment_id=payload.parent_comment_id,
-            )
+        # 댓글 생성
+        comment = Comment(
+            post_id=post_id,
+            author_id=author_id,
+            content=payload.content,
+            parent_comment_id=payload.parent_comment_id,
+        )
 
-            # 태그 유효성 검사 및 추가
-            tags = await self.comment_repository.get_valid_tags(session, payload.tags or [])
-            invalid_tags = set(payload.tags or []) - {tag.nickname for tag in tags}
-            if invalid_tags:
-                raise ValueError(f"유효하지 않은 태그입니다: {', '.join(invalid_tags)}")
+        # 태그 유효성 검사 및 추가
+        tags = await self.comment_repository.get_valid_tags(session, payload.tags or [])
+        invalid_tags = set(payload.tags or []) - {tag.nickname for tag in tags}
+        if invalid_tags:
+            raise ValueError(f"유효하지 않은 태그입니다: {', '.join(invalid_tags)}")
 
-            await self.comment_repository.create_comment(session, comment, tags)
+        await self.comment_repository.create_comment(session, comment, tags)
 
-            # 닉네임 및 프로필 이미지 조회
-            user_info = await self.comment_repository.get_user_info(session, author_id)
+        # 닉네임 및 프로필 이미지 조회
+        user_info = await self.comment_repository.get_user_info(session, author_id)
+
+        await session.commit()
 
         return CommentCreateResponse(
             comment_id=comment.id,
