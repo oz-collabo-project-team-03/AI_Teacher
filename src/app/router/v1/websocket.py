@@ -17,27 +17,22 @@ chat_service = ChatService()
 
 
 # Websocket
-@router.websocket("/ws/{room_id}")
+@router.websocket("/ws/{room_id}/{user_id}")
 async def websocket(
     websocket: WebSocket,
     room_id: int,
-    current_user: dict = Depends(get_current_user_ws),
+    user_id: int,
+    # current_user: dict = Depends(get_current_user_ws),
 ):
     try:
-        # await websocket.accept()
-        if not current_user:
-            await websocket.send_json({"error": "Authentication failed", "code": status.WS_1008_POLICY_VIOLATION})
-            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+        user_id = user_id
+        # if not current_user:
+        #     await websocket.send_json({"error": "Authentication failed", "code": status.WS_1008_POLICY_VIOLATION})
+        #     raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
-        user_id = current_user["user_id"]
         if user_id is None:
             await websocket.send_json({"error": "User ID를 찾을 수 없습니다.", "code": status.WS_1008_POLICY_VIOLATION})
             raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="User ID를 찾을 수 없습니다.")
-
-            # if user_id is None:
-            #     await websocket.send_text("User ID를 찾을 수 없습니다. 연결이 끊어집니다.")
-            #     await websocket.close(code=4004)
-            #     return
 
         room = await RoomRepository.get_room(room_id=room_id)
         if room is None:
@@ -79,6 +74,4 @@ async def websocket(
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
     finally:
-        if "user_id" in locals():
-            await manager.disconnect(room_id, user_id)
-        await websocket.close()
+        await manager.disconnect(room_id, user_id)
