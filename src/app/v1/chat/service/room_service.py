@@ -8,6 +8,9 @@ from src.app.v1.chat.schema.room_response import (
     RoomHelpResponse,
     RoomHelpUpdateResponse,
     RoomMessagesListResponse,
+    RoomInfo,
+    TeacherInfo,
+    TeacherStudentResponse,
 )
 
 AI_PROFILE = "https://kr.object.ncloudstorage.com/backendsam/AI_Profile/AI.jpg"
@@ -22,7 +25,7 @@ class RoomService:
         student_id = await self.room_repository.user_exists(user_id)
         if not student_id:
             raise HTTPException(status_code=404, detail="학생 id를 찾을 수 없습니다.")
-        teacher_id = await self.room_repository.get_teacher_id(user_id)
+        teacher_id = await self.room_repository.get_teacher_id_with_student(user_id)
         if not teacher_id:
             raise HTTPException(status_code=404, detail="등록된 선생 id를 찾을 수 없습니다.")
 
@@ -40,7 +43,7 @@ class RoomService:
         student_id = await self.room_repository.user_exists(user_id)
         if not student_id:
             raise HTTPException(status_code=404, detail="학생 id를 찾을 수 없습니다.")
-        teacher_id = await self.room_repository.get_teacher_id(user_id)
+        teacher_id = await self.room_repository.get_teacher_id_with_student(user_id)
         if not teacher_id:
             raise HTTPException(status_code=404, detail="등록된 선생 id를 찾을 수 없습니다.")
 
@@ -103,8 +106,39 @@ class RoomService:
         )
 
     # 관리 학생 목록 조회
-    async def get_students(self, mongo: AIOEngine, room_id: int, user_id: int):
-        pass
+    async def get_students(self, user_id: int):
+        teacher_id = await self.room_repository.user_exists(user_id)
+        if not teacher_id:
+            raise HTTPException(status_code=404, detail="선생 id를 찾을 수 없습니다.")
+        try:
+            # 학생 및 방 정보 가져오기
+            students_result = await self.room_repository.get_students_by_teacher(teacher_id)
+
+            # 교사 정보 가져오기
+            teacher_result = await self.room_repository.fetch_teacher_info(teacher_id)
+
+            # 결과 정리
+            rooms_info = []
+            for row in students_result:
+                room_info = RoomInfo(
+                    room_id=row.room_id,
+                    student_id=row.student_id,
+                    student_nickname=row.student_nickname,
+                    student_image_url=row.student_image_url or "default_student_image.jpg",
+                    help_checked=row.help_checked,
+                )
+                rooms_info.append(room_info)
+
+            teacher_info = TeacherInfo(
+                teacher_id=teacher_id,
+                teacher_image_url=(teacher_result.teacher_image_url if teacher_result else None) or "default_teacher_image.jpg",
+                teacher_nickname=teacher_result.teacher_nickname if teacher_result else "선생님",
+            )
+
+            return TeacherStudentResponse(teacher=teacher_info, rooms=rooms_info)
+
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
     # 헬프 목록 조회
     async def room_help_list(self, mongo: AIOEngine, user_id: int) -> list[RoomHelpResponse] | None:

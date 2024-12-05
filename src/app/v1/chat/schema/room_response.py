@@ -89,6 +89,25 @@ class RoomMessagesListResponse(BaseModel):
         )
 
 
+class RoomInfo(BaseModel):
+    room_id: int
+    student_id: int
+    student_nickname: str
+    student_image_url: str
+    help_checked: bool
+
+
+class TeacherInfo(BaseModel):
+    teacher_id: int
+    teacher_image_url: str | None
+    teacher_nickname: str
+
+
+class TeacherStudentResponse(BaseModel):
+    teacher: TeacherInfo
+    rooms: list[RoomInfo]
+
+
 class RoomHelpResponse(BaseModel):
     room_id: int
     student_id: int

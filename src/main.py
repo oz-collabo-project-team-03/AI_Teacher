@@ -76,6 +76,7 @@ async def consume_messages(app: FastAPI):
     except Exception as e:
         print(f"Error consuming kafka messages: {e}")
 
+
 health_router = APIRouter(prefix="/api/v1", tags=["Health"])
 
 
@@ -95,14 +96,18 @@ app.include_router(websocket_router)
 app.include_router(health_router)
 
 origins = [
+    "http://localhost:5173/",
     "http://localhost:5173",
+    "https://localhost:5173/",
     "https://localhost:5173",
+    "http://localhost:8000/",
     "http://localhost:8000",
+    "http://sam-test.kprolabs.space:8000/",
     "http://sam-test.kprolabs.space:8000",
+    "http://kong.kprolabs.space:8000/",
     "http://kong.kprolabs.space:8000",
+    "http://158.180.84.161:8000/",
     "http://158.180.84.161:8000",
-    "ws://kong.kprolabs.space:8000",
-    "ws://158.180.84.161:8000",
 ]
 
 app.add_middleware(
@@ -112,6 +117,8 @@ app.add_middleware(
     allow_origin_regex="http://111\\.111\\.111\\.111(:\\d+)?",
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,
 )
 
 
