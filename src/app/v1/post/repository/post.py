@@ -339,7 +339,7 @@ class PostRepository:
 
                 post_data = {
                     "nickname": tag.nickname,
-                    "user_id": teacher.id,
+                    "user_id": user.id,
                     "profile_image": user.profile_image,
                     "career_aspiration": student.career_aspiration,
                     "interest": student.interest,
@@ -443,7 +443,7 @@ class PostRepository:
 
                 post_data = {
                     "nickname": tag.nickname,
-                    "user_id": teacher.id,
+                    "user_id": user.id,
                     "profile_image": user.profile_image,
                     "career_aspiration": student.career_aspiration,
                     "interest": student.interest,
