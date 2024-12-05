@@ -5,6 +5,7 @@ from src.app.common.factory import get_room_service, mongo_db
 from src.app.common.utils.dependency import get_current_user
 from src.app.v1.chat.schema.room_request import RoomCreateRequest
 from src.app.v1.chat.schema.room_response import RoomCreateResponse, RoomListResponse, RoomHelpResponse, RoomHelpUpdateResponse
+from src.app.v1.chat.service import room_service
 from src.app.v1.chat.service.room_service import RoomService
 
 router = APIRouter(tags=["Chats"])
@@ -80,8 +81,14 @@ async def get_room_messages(
 
 # 관리 학생 목록 조회
 @router.get("/teacher/students", response_model="")
-async def get_students():
-    pass
+async def get_students(
+    room_service: RoomService = Depends(get_room_service),
+    current_user: dict = Depends(get_current_user),
+):
+    user_id = current_user.get("user_id")
+    if user_id is None:
+        raise HTTPException(status_code=404, detail="User ID를 찾을 수 없습니다.")
+    return await room_service.get_students(user_id=user_id)
 
 
 # 헬프 목록 조회
@@ -93,5 +100,5 @@ async def get_help_list(
 ):
     user_id = current_user.get("user_id")
     if user_id is None:
-        raise HTTPException(status_code=404, detail="User ID는 None일 수 없습니다.")
+        raise HTTPException(status_code=404, detail="User ID를 찾을 수 없습니다.")
     return await room_service.room_help_list(mongo, user_id=int(user_id))

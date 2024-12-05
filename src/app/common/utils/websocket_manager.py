@@ -23,7 +23,6 @@ load_dotenv()
 
 class ConnectionManager:
 
-    # def __init__(self, mongo: AIOEngine = Depends(mongo_db)):mongodb
     def __init__(self):
         self.active_connections: dict[int, dict[int, WebSocket]] = {}  # room_id: {user_id: websocket}
         self.mongo = mongo
@@ -65,39 +64,39 @@ class ConnectionManager:
             if not self.active_connections[room_id]:
                 del self.active_connections[room_id]
 
-    async def toggle_help_state(self, room_id: int) -> bool:
-        async with SessionLocal() as session:
-            try:
-                query = select(Room).where(Room.id == room_id)
-                result = await session.execute(query)
-                room = result.scalar_one_or_none()
+    # async def toggle_help_state(self, room_id: int) -> bool:
+    #     async with SessionLocal() as session:
+    #         try:
+    #             query = select(Room).where(Room.id == room_id)
+    #             result = await session.execute(query)
+    #             room = result.scalar_one_or_none()
 
-                if room is None:
-                    logger.warning(f"Room ID: {room_id}가 존재하지 않습니다.")
-                    return False
+    #             if room is None:
+    #                 logger.warning(f"Room ID: {room_id}가 존재하지 않습니다.")
+    #                 return False
 
-                # help_checked 속성의 값을 반전시키는 작업
-                room.help_checked = not room.help_checked
-                room.updated_at = datetime.now()
+    #             # help_checked 속성의 값을 반전시키는 작업
+    #             room.help_checked = not room.help_checked
+    #             room.updated_at = datetime.now()
 
-                await session.commit()
+    #             await session.commit()
 
-                message = {
-                    "type": "system",
-                    "room_id": room_id,
-                    "sender_id": "SYSTEM",
-                    "content": "선생님과의 대화가 시작되었습니다." if room.help_checked else "AI 선생님과의 대화가 다시 시작되었습니다.",
-                    "timestamp": datetime.now().isoformat(),
-                }
-                logger.info(f"Send Message {message}")
-                await self.send_message(message)
+    #             message = {
+    #                 "type": "system",
+    #                 "room_id": room_id,
+    #                 "sender_id": "SYSTEM",
+    #                 "content": "선생님과의 대화가 시작되었습니다." if room.help_checked else "AI 선생님과의 대화가 다시 시작되었습니다.",
+    #                 "timestamp": datetime.now().isoformat(),
+    #             }
+    #             logger.info(f"Send Message {message}")
+    #             await self.send_message(message)
 
-                return room.help_checked
+    #             return room.help_checked
 
-            except Exception as e:
-                logger.error(f"Error toggling help state for Room ID {room_id}: {str(e)}")
-                await session.rollback()
-                return False
+    #         except Exception as e:
+    #             logger.error(f"Error toggling help state for Room ID {room_id}: {str(e)}")
+    #             await session.rollback()
+    #             return False
 
     async def can_send_message(self, room_id: int, user_type: UserRole) -> bool:
         async with SessionLocal() as session:
@@ -109,11 +108,15 @@ class ConnectionManager:
                 if not room:
                     return False
 
+                # Students can always send messages
                 if user_type == UserRole.STUDENT:
                     return True
+                # Teachers can only send messages in teacher mode (help_checked=True)
                 elif user_type == UserRole.TEACHER:
-                    return room.help_checked
-                return False
+                    if not room.help_checked:
+                        logger.info("Teacher attempted to send message in AI mode")
+                        return False
+                    return True
 
             except Exception as e:
                 logger.error(f"Error checking message permission for Room ID {room_id}: {str(e)}")

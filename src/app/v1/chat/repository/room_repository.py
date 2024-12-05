@@ -17,7 +17,10 @@ from src.app.v1.user.entity.user import User
 from src.app.v1.chat.entity.room import Room
 from src.config.database.postgresql import SessionLocal
 from src.app.common.utils.consts import UserRole
-from src.app.v1.chat.schema.room_response import RoomListResponse, RoomHelpResponse
+from src.app.v1.chat.schema.room_response import (
+    RoomListResponse,
+    RoomHelpResponse,
+)
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -101,7 +104,7 @@ class RoomRepository:
                 return False
 
     @staticmethod
-    async def get_teacher_id(user_id: int) -> int | None:
+    async def get_teacher_id_with_student(user_id: int) -> int | None:
         async with SessionLocal() as session:
             try:
                 # user_id로 student를 찾고, 그 student의 student_group을 통해 teacher_id 조회
@@ -318,6 +321,105 @@ class RoomRepository:
             except Exception as e:
                 logger.error(f"An unexpected error occurred: {e}")
                 raise HTTPException(status_code=500, detail="{e}")
+
+    @staticmethod
+    async def get_students_by_teacher(teacher_id: int):
+        async with SessionLocal() as session:
+            try:
+                student_query = (
+                    select(
+                        User.id.label("student_id"),
+                        User.profile_image.label("student_image_url"),
+                        Tag.nickname.label("student_nickname"),
+                        Room.id.label("room_id"),
+                        Room.help_checked,
+                        func.count(Room.id).label("room_count"),
+                    )
+                    .join(Participant, Participant.student_id == User.id)
+                    .join(Tag, Tag.user_id == User.id)
+                    .join(Room, Room.id == Participant.room_id)
+                    .where(Participant.teacher_id == teacher_id)
+                    .group_by(User.id, Tag.nickname, Room.id)
+                )
+                students_result = await session.execute(student_query)
+                return students_result.fetchall()
+            except SQLAlchemyError as e:
+                logger.error(f"Database error in get_teacher_info: {e}")
+                raise HTTPException(status_code=500, detail="DB 오류 발생")
+
+    @staticmethod
+    async def fetch_teacher_info(teacher_id: int):
+        async with SessionLocal() as session:
+            try:
+                teacher_query = (
+                    select(User.profile_image.label("teacher_image_url"), Tag.nickname.label("teacher_nickname"))
+                    .join(Tag, Tag.user_id == User.id)
+                    .where(User.id == teacher_id)
+                )
+
+                teacher_result = await session.execute(teacher_query)
+                return teacher_result.first()
+            except SQLAlchemyError as e:
+                logger.error(f"Database error in get_teacher_info: {e}")
+                raise HTTPException(status_code=500, detail="DB 오류 발생")
+
+    # @staticmethod
+    # async def get_students_each_room(teacher_id: int) -> TeacherStudentResponse:
+    #     async with SessionLocal() as session:
+    #         try:
+    #             student_query = (
+    #                 select(
+    #                     User.id.label("student_id"),
+    #                     User.profile_image.label("student_image_url"),
+    #                     Tag.nickname.label("student_nickname"),
+    #                     Room.id.label("room_id"),
+    #                     Room.help_checked,
+    #                     func.count(Room.id).label("room_count"),
+    #                 )
+    #                 .join(Participant, Participant.student_id == User.id)
+    #                 .join(Tag, Tag.user_id == User.id)
+    #                 .join(Room, Room.id == Participant.room_id)
+    #                 .where(Participant.teacher_id == teacher_id)
+    #                 .group_by(User.id, Tag.nickname, Room.id)
+    #             )
+
+    #             # 교사 정보 쿼리
+    #             teacher_query = (
+    #                 select(User.profile_image.label("teacher_image_url"), Tag.nickname.label("teacher_nickname"))
+    #                 .join(Tag, Tag.user_id == User.id)
+    #                 .where(User.id == teacher_id)
+    #             )
+
+    #             students_result = await session.execute(student_query)
+    #             teacher_result = await session.execute(teacher_query)
+
+    #             students_result = students_result.fetchall()
+    #             teacher_result = teacher_result.first()
+
+    #             # 결과 정리
+    #             students_info = {}
+    #             for row in students_result:
+    #                 student_id = row.student_id
+    #                 if student_id not in students_info:
+    #                     students_info[student_id] = StudentInfo(
+    #                         student_id=student_id, student_image_url=row.student_image_url, student_nickname=row.student_nickname, rooms=[]
+    #                     )
+    #                 students_info[student_id].rooms.append(RoomInfo(room_id=row.room_id, help_checked=row.help_checked))
+
+    #             teacher_info = TeacherInfo(
+    #                 teacher_id=teacher_id,
+    #                 teacher_image_url=(teacher_result.teacher_image_url if teacher_result else None) or "default_teacher_image.jpg",
+    #                 teacher_nickname=teacher_result.teacher_nickname if teacher_result else "Unknown",
+    #             )
+
+    #             return TeacherStudentResponse(teacher=teacher_info, students=list(students_info.values()))
+
+    #         except SQLAlchemyError as e:
+    #             logger.error(f"Database error occurred while fetching teacher ID: {e}")
+    #             raise HTTPException(status_code=500, detail="DB 오류 발생")
+    #         except Exception as e:
+    #             logger.error(f"An unexpected error occurred: {e}")
+    #             raise HTTPException(status_code=500, detail="{e}")
 
     @staticmethod
     async def get_room_help_list(mongo: AIOEngine, user_id: int) -> list[RoomHelpResponse] | None:
