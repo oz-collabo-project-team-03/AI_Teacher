@@ -75,74 +75,125 @@ class OAuthRepository:
             .where(User.id == user_id)
         )
         result = await session.execute(query)
-        user = result.scalars().first()
-        if not user:
-            logger.warning(f"User with ID {user_id} not found.")
-        return user
+        return result.scalar_one_or_none()
+        # user = result.scalars().first()
+        # if not user:
+        #     logger.warning(f"User with ID {user_id} not found.")
+        # return user
 
     async def update_student(self, user_id: int, student_data: dict, session: AsyncSession) -> User:
         user = await self.get_user_with_info(user_id, session)
         if not user:
-            logger.warning(f"User with ID {user_id} not found.")
             raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
 
         if "nickname" in student_data:
             if user.tag:
                 user.tag.nickname = student_data["nickname"]
             else:
-                new_tag = Tag(user_id=user.id, nickname=student_data["nickname"])
-                session.add(new_tag)
-
-        if "profile_image" in student_data:
-            user.profile_image = student_data["profile_image"]
+                session.add(Tag(user_id=user.id, nickname=student_data["nickname"]))
 
         if user.student:
             student = user.student
-            if "career_aspiration" in student_data:
-                student.career_aspiration = student_data["career_aspiration"]
-            if "interest" in student_data:
-                student.interest = student_data["interest"]
-            if "description" in student_data:
-                student.description = student_data["description"]
-            if "school" in student_data:
-                student.school = student_data["school"]
-            if "grade" in student_data:
-                student.grade = student_data["grade"]
+        else:
+            student = Student(user_id=user.id)
+            session.add(student)
+
+        for key, value in student_data.items():
+            if hasattr(student, key):
+                setattr(student, key, value)
 
         user.first_login = False
-
         await session.flush()
-        logger.info(f"User profile updated successfully for user_id={user_id}")
         return user
-
 
     async def update_teacher(self, user_id: int, teacher_data: dict, session: AsyncSession) -> User:
         user = await self.get_user_with_info(user_id, session)
         if not user:
-            print(f"User with ID {user_id} not found.")
-            raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+            raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
 
         if "nickname" in teacher_data:
             if user.tag:
                 user.tag.nickname = teacher_data["nickname"]
             else:
-                new_tag = Tag(user_id=user.id, nickname=teacher_data["nickname"])
-                session.add(new_tag)
-
-        if "profile_image" in teacher_data:
-            user.profile_image = teacher_data["profile_image"]
+                session.add(Tag(user_id=user.id, nickname=teacher_data["nickname"]))
 
         if user.teacher and user.teacher.organization:
             organization = user.teacher.organization
-            if "organization_name" in teacher_data:
-                organization.name = teacher_data["organization_name"]
-            if "organization_type" in teacher_data:
-                organization.type = teacher_data["organization_type"]
-            if "position" in teacher_data:
-                organization.position = teacher_data["position"]
+        else:
+            organization = Organization(teacher=user.teacher)
+            session.add(organization)
+
+        for key, value in teacher_data.items():
+            if hasattr(organization, key):
+                setattr(organization, key, value)
 
         user.first_login = False
-
         await session.flush()
-        print(f"Teacher profile updated successfully for user_id={user_id}")
         return user
+
+    # async def update_student(self, user_id: int, student_data: dict, session: AsyncSession) -> User:
+    #     user = await self.get_user_with_info(user_id, session)
+    #     if not user:
+    #         logger.warning(f"User with ID {user_id} not found.")
+    #         raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
+    #
+    #     if "nickname" in student_data:
+    #         if user.tag:
+    #             user.tag.nickname = student_data["nickname"]
+    #         else:
+    #             new_tag = Tag(user_id=user.id, nickname=student_data["nickname"])
+    #             session.add(new_tag)
+    #
+    #     if "profile_image" in student_data:
+    #         user.profile_image = student_data["profile_image"]
+    #
+    #     if user.student:
+    #         student = user.student
+    #         if "career_aspiration" in student_data:
+    #             student.career_aspiration = student_data["career_aspiration"]
+    #         if "interest" in student_data:
+    #             student.interest = student_data["interest"]
+    #         if "description" in student_data:
+    #             student.description = student_data["description"]
+    #         if "school" in student_data:
+    #             student.school = student_data["school"]
+    #         if "grade" in student_data:
+    #             student.grade = student_data["grade"]
+    #
+    #     user.first_login = False
+    #
+    #     await session.flush()
+    #     logger.info(f"User profile updated successfully for user_id={user_id}")
+    #     return user
+    #
+    #
+    # async def update_teacher(self, user_id: int, teacher_data: dict, session: AsyncSession) -> User:
+    #     user = await self.get_user_with_info(user_id, session)
+    #     if not user:
+    #         print(f"User with ID {user_id} not found.")
+    #         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+    #
+    #     if "nickname" in teacher_data:
+    #         if user.tag:
+    #             user.tag.nickname = teacher_data["nickname"]
+    #         else:
+    #             new_tag = Tag(user_id=user.id, nickname=teacher_data["nickname"])
+    #             session.add(new_tag)
+    #
+    #     if "profile_image" in teacher_data:
+    #         user.profile_image = teacher_data["profile_image"]
+    #
+    #     if user.teacher and user.teacher.organization:
+    #         organization = user.teacher.organization
+    #         if "organization_name" in teacher_data:
+    #             organization.name = teacher_data["organization_name"]
+    #         if "organization_type" in teacher_data:
+    #             organization.type = teacher_data["organization_type"]
+    #         if "position" in teacher_data:
+    #             organization.position = teacher_data["position"]
+    #
+    #     user.first_login = False
+    #
+    #     await session.flush()
+    #     print(f"Teacher profile updated successfully for user_id={user_id}")
+    #     return user

@@ -1,7 +1,7 @@
 import logging
 from typing import Union
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Response, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Response, Query, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.utils.consts import UserRole, SocialProvider
@@ -166,18 +166,18 @@ async def create_study_group(
     )
 
 
-# # 로그인 엔드포인트 - 테스트
-# @router.get("/login/{provider}")
-# async def login(provider: str):
-#     oauth_url = oauth_service.get_oauth_url(provider)
-#     print(f"Generated OAuth URL: {oauth_url}")
-#     return RedirectResponse(oauth_url)
+# 로그인 엔드포인트 - 테스트
+@router.get("/login/{provider}")
+async def login(provider: str):
+    oauth_url = oauth_service.get_oauth_url(provider)
+    print(f"Generated OAuth URL: {oauth_url}")
+    return RedirectResponse(oauth_url)
 
 # Callback 엔드포인트
 @router.post("/login/callback/{provider}")
 async def social_login_callback(
-        provider: SocialProvider,
         response: Response,
+        provider: str = Path(...),
         code: str = Query(...),
         session: AsyncSession = Depends(get_session),
 ):
@@ -204,15 +204,27 @@ async def social_login_callback(
         logger.error(f"An error occurred during social login callback: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-
-@router.patch("/social/info/", response_model=MessageResponse)
-async def additional_info(
-        payload: Union[SocialLoginStudentRequest, SocialLoginTeacherRequest],
-        current_user: dict = Depends(get_current_user),
-        session: AsyncSession = Depends(get_session),
+@router.patch("/social/info/student", response_model=MessageResponse)
+async def additional_student_info(
+    payload: SocialLoginStudentRequest,
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = current_user.get("user_id")
     if not user_id:
         raise HTTPException(status_code=401, detail="유효하지 않은 사용자입니다.")
 
-    return await oauth_service.additional_user_info(payload=payload, session=session, user_id=user_id)
+    return await oauth_service.update_student_info(payload=payload, user_id=user_id, session=session)
+
+
+@router.patch("/social/info/teacher", response_model=MessageResponse)
+async def additional_teacher_info(
+    payload: SocialLoginTeacherRequest,
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    user_id = current_user.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="유효하지 않은 사용자입니다.")
+
+    return await oauth_service.update_teacher_info(payload=payload, user_id=user_id, session=session)
