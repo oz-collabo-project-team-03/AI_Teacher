@@ -37,6 +37,7 @@ class ConnectionManager:
         self.producer = producer
         logger.info("Kafka producer initialized")
 
+
     async def connect(self, websocket: WebSocket, room_id: int, user_id: int, user_type: UserRole):
         await websocket.accept()
 
@@ -58,45 +59,37 @@ class ConnectionManager:
             }
             await self.send_message(welcome_message)
 
+    async def handle_message(self, room: Room, user_id: int, user_type: UserRole, content: str):
+        now = datetime.now()
+        message = {
+            "room_id": room.id,
+            "title": room.title,
+            "sender_id": user_id,
+            "content": content,
+            "message_type": "text",
+            "user_type": user_type.value,
+            "timestamp": now.strftime("%Y-%m-%d %H시%M분"),
+        }
+        await self.send_message(message)
+
+        if not room.help_checked and user_type == UserRole.STUDENT:
+            ai_response = await self.ai_chat(content)
+            ai_message = {
+                "room_id": room.id,
+                "title": room.title,
+                "sender_id": self.ai_user_id,
+                "content": ai_response,
+                "message_type": "text",
+                "user_type": "ai",
+                "timestamp": now.strftime("%Y-%m-%d %H시%M분"),
+            }
+            await self.send_message(ai_message)
+
     async def disconnect(self, room_id: int, user_id: int):
         if room_id in self.active_connections:
             self.active_connections[room_id].pop(user_id, None)
             if not self.active_connections[room_id]:
                 del self.active_connections[room_id]
-
-    # async def toggle_help_state(self, room_id: int) -> bool:
-    #     async with SessionLocal() as session:
-    #         try:
-    #             query = select(Room).where(Room.id == room_id)
-    #             result = await session.execute(query)
-    #             room = result.scalar_one_or_none()
-
-    #             if room is None:
-    #                 logger.warning(f"Room ID: {room_id}가 존재하지 않습니다.")
-    #                 return False
-
-    #             # help_checked 속성의 값을 반전시키는 작업
-    #             room.help_checked = not room.help_checked
-    #             room.updated_at = datetime.now()
-
-    #             await session.commit()
-
-    #             message = {
-    #                 "type": "system",
-    #                 "room_id": room_id,
-    #                 "sender_id": "SYSTEM",
-    #                 "content": "선생님과의 대화가 시작되었습니다." if room.help_checked else "AI 선생님과의 대화가 다시 시작되었습니다.",
-    #                 "timestamp": datetime.now().isoformat(),
-    #             }
-    #             logger.info(f"Send Message {message}")
-    #             await self.send_message(message)
-
-    #             return room.help_checked
-
-    #         except Exception as e:
-    #             logger.error(f"Error toggling help state for Room ID {room_id}: {str(e)}")
-    #             await session.rollback()
-    #             return False
 
     async def can_send_message(self, room_id: int, user_type: UserRole) -> bool:
         async with SessionLocal() as session:
@@ -158,9 +151,9 @@ class ConnectionManager:
                 except Exception as e:
                     print(f"Failed to send message to websocket: {e}")
 
-    async def handle_kafka_message(self, message: dict):
-        """Kafka 메시지를 처리하고 웹소켓으로 브로드캐스트합니다."""
-        await self.broadcast_message(message)
+    # async def handle_kafka_message(self, message: dict):
+    #     """Kafka 메시지를 처리하고 웹소켓으로 브로드캐스트합니다."""
+    #     await self.broadcast_message(message)
 
 
 manager = ConnectionManager()

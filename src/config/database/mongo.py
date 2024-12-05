@@ -72,10 +72,6 @@ class MongoDB:
         finally:
             pass  # 연결은 애플리케이션 종료 시에만 닫습니다
 
-    # async def get_db(self):
-    #     async with self.get_mongodb() as db:
-    #         yield db
-
 
 # MongoDB 인스턴스 생성
 mongodb = MongoDB()

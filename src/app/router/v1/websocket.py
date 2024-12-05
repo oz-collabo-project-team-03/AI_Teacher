@@ -1,12 +1,12 @@
 import logging
-from fastapi import APIRouter, WebSocket, HTTPException
+from fastapi import APIRouter, WebSocket, HTTPException, Depends, WebSocketException, status
 
 from src.app.v1.chat.repository.room_repository import RoomRepository
 from src.app.v1.chat.repository.chat_repository import ChatRepository
 from src.app.v1.chat.service.chat import ChatService
 from src.app.common.utils.websocket_manager import manager
 from src.app.common.utils.consts import UserRole
-
+from src.app.common.utils.security import get_current_user_ws
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,20 +17,27 @@ chat_service = ChatService()
 
 
 # Websocket
-@router.websocket("/ws/{room_id}/{user_id}")
+@router.websocket("/ws/{room_id}")
 async def websocket(
     websocket: WebSocket,
     room_id: int,
-    user_id: int,
+    current_user: dict = Depends(get_current_user_ws),
 ):
     try:
-        # TODO: user_id를 따로 찾아서 검증
-        # user_id = current_user.get("user_id")
-        user_id = user_id
+        # await websocket.accept()
+        if not current_user:
+            await websocket.send_json({"error": "Authentication failed", "code": status.WS_1008_POLICY_VIOLATION})
+            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+
+        user_id = current_user["user_id"]
         if user_id is None:
-            await websocket.send_text("User ID를 찾을 수 없습니다. 연결이 끊어집니다.")
-            await websocket.close(code=4004)
-            return
+            await websocket.send_json({"error": "User ID를 찾을 수 없습니다.", "code": status.WS_1008_POLICY_VIOLATION})
+            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="User ID를 찾을 수 없습니다.")
+
+            # if user_id is None:
+            #     await websocket.send_text("User ID를 찾을 수 없습니다. 연결이 끊어집니다.")
+            #     await websocket.close(code=4004)
+            #     return
 
         room = await RoomRepository.get_room(room_id=room_id)
         if room is None:
@@ -66,7 +73,12 @@ async def websocket(
     except HTTPException as he:
         await websocket.close(code=4004)
         logger.error(f"WebSocket connection error: {he.detail}")
+    except WebSocketException as wse:
+        await websocket.close(code=wse.code, reason=wse.reason)
+        logger.error(f"WebSocket error: {wse.reason}")
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
     finally:
-        await manager.disconnect(room_id, user_id)
+        if "user_id" in locals():
+            await manager.disconnect(room_id, user_id)
+        await websocket.close()
