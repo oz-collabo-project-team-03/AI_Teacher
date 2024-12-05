@@ -15,6 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.utils.consts import UserRole
+from src.app.common.utils.image import NCPStorageService  # type: ignore
 from src.app.common.utils.redis_utils import (
     REFRESH_TOKEN_TTL,
     delete_from_redis,
@@ -62,8 +63,9 @@ EMAIL_VERIFICATION_KEY_TEMPLATE = "verification:email:{email}"
 
 
 class UserService:
-    def __init__(self, user_repo: UserRepository):
+    def __init__(self, user_repo: UserRepository, storage_service: NCPStorageService):
         self.user_repo = user_repo
+        self.storage_service = storage_service
 
     @staticmethod
     def _validate_email_format(email: str) -> bool:
@@ -626,6 +628,13 @@ class UserService:
                     print(f"Invalid role or user not found for user_id={user_id}")
                     raise HTTPException(status_code=403, detail="학생만 프로필을 편집할 수 있습니다.")
 
+                if "profile_image" in update_data:
+                    upload_file = update_data["profile_image"]
+                    uploaded_url = self.storage_service.upload_images([upload_file])[0]
+                    if not uploaded_url:
+                        raise HTTPException(status_code=400, detail="프로필 이미지 업로드에 실패했습니다.")
+                    update_data["profile_image_url"] = uploaded_url
+
                 # 업데이트 처리
                 updated = await self.user_repo.update_student_profile(user_id, update_data, session)
                 if not updated:
@@ -647,6 +656,14 @@ class UserService:
                 if not user or user.role != UserRole.TEACHER:
                     print(f"Invalid role or user not found for user_id={user_id}")
                     raise HTTPException(status_code=403, detail="선생님만 프로필을 편집할 수 있습니다.")
+
+                # 프로필 이미지 업로드 처리
+                if "profile_image" in profile_data:
+                    upload_file = profile_data["profile_image"]
+                    uploaded_url = self.storage_service.upload_images([upload_file])[0]
+                    if not uploaded_url:
+                        raise HTTPException(status_code=400, detail="프로필 이미지 업로드에 실패했습니다.")
+                    profile_data["profile_image_url"] = uploaded_url
 
                 updated = await self.user_repo.update_teacher_profile(user_id, profile_data, session)
                 if not updated:

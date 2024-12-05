@@ -37,9 +37,8 @@ class UserInfoResponse(BaseModel):
 
 class SocialLoginResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    external_id: str
+    id: str
     access_token: str
-    refresh_token: str
     token_type: str
     expires_in: int
     role: str | None

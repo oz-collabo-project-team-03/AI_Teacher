@@ -1,13 +1,15 @@
 import logging
 from typing import Union
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Response, Query, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.app.common.utils.consts import UserRole
+from src.app.common.utils.consts import UserRole, SocialProvider
 from src.app.common.utils.dependency import get_current_user, get_session
+from src.app.common.utils.image import NCPStorageService  # type: ignore
+
 from src.app.v1.auth.repository.oauth_repository import OAuthRepository
-from src.app.v1.auth.schema.requestDto import SocialLoginStudentRequest, SocialLoginTeacherRequest
+from src.app.v1.auth.schema.requestDto import SocialLoginStudentRequest, SocialLoginTeacherRequest, OAuthRequest
 from src.app.v1.auth.schema.responseDto import SocialLoginResponse
 from src.app.v1.auth.service.oauth_service import OAuthService
 from src.app.v1.user.repository.user_repository import UserRepository
@@ -41,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 user_repo = UserRepository()
-user_service = UserService(user_repo=user_repo)
+user_service = UserService(user_repo=user_repo, storage_service=NCPStorageService())
 oauth_repo = OAuthRepository()
 oauth_service = OAuthService(oauth_repo=oauth_repo, user_repo=user_repo)
 
@@ -164,22 +166,23 @@ async def create_study_group(
     )
 
 
-# 로그인 엔드포인트
+# 로그인 엔드포인트 - 테스트
 @router.get("/login/{provider}")
 async def login(provider: str):
     oauth_url = oauth_service.get_oauth_url(provider)
     print(f"Generated OAuth URL: {oauth_url}")
     return RedirectResponse(oauth_url)
 
-
 # Callback 엔드포인트
 @router.post("/login/callback/{provider}")
 async def social_login_callback(
-    provider: str,
-    code: str,
-    response: Response,
-    session: AsyncSession = Depends(get_session),
+        response: Response,
+        body: OAuthRequest,
+        provider: str = Path(...),
+        session: AsyncSession = Depends(get_session),
 ):
+    code = body.code
+
     token_data = await oauth_service.get_access_token(provider, code)
     access_token = token_data.get("access_token")
     user_info = await oauth_service.get_user_info(provider, access_token)
@@ -189,9 +192,10 @@ async def social_login_callback(
     return result
 
 
-@router.patch("/social/info/", response_model=MessageResponse)
-async def additional_info(
-    payload: Union[SocialLoginStudentRequest, SocialLoginTeacherRequest],
+
+@router.patch("/social/info/student", response_model=MessageResponse)
+async def additional_student_info(
+    payload: SocialLoginStudentRequest,
     current_user: dict = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
@@ -199,4 +203,17 @@ async def additional_info(
     if not user_id:
         raise HTTPException(status_code=401, detail="유효하지 않은 사용자입니다.")
 
-    return await oauth_service.additional_user_info(payload=payload, session=session, user_id=user_id)
+    return await oauth_service.update_student_info(payload=payload, user_id=user_id, session=session)
+
+
+@router.patch("/social/info/teacher", response_model=MessageResponse)
+async def additional_teacher_info(
+    payload: SocialLoginTeacherRequest,
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    user_id = current_user.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="유효하지 않은 사용자입니다.")
+
+    return await oauth_service.update_teacher_info(payload=payload, user_id=user_id, session=session)

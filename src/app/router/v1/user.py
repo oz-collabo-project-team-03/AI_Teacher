@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.utils.dependency import get_current_user, get_session
+from src.app.common.utils.image import NCPStorageService  # type: ignore
 from src.app.v1.auth.schema.responseDto import MessageResponse
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.user.schema.requestDto import UpdateStudentProfileRequest, UpdateTeacherProfileRequest
@@ -15,7 +16,9 @@ from src.app.v1.user.service.user_service import UserService
 
 router = APIRouter(prefix="/users", tags=["Mypage"])
 user_repo = UserRepository()
-user_service = UserService(user_repo=user_repo)
+storage_service = NCPStorageService()
+user_service = UserService(user_repo, storage_service)
+
 
 # 자신 -> 내 프로필 조회
 @router.get("/profile/me", response_model=Union[StudentProfileResponse, TeacherProfileResponse])
