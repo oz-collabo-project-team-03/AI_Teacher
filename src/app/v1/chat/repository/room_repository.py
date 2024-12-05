@@ -1,7 +1,8 @@
 import logging
 
+from requests import session
 from sqlalchemy.exc import NoResultFound, SQLAlchemyError
-from sqlalchemy import func, and_
+from sqlalchemy import case, func, and_
 from sqlalchemy.orm import aliased
 from sqlalchemy.future import select
 from odmantic import AIOEngine, query
@@ -12,6 +13,7 @@ from src.app.v1.chat.entity.message import Message
 from src.app.v1.chat.entity.participant import Participant
 from src.app.v1.chat.entity.room import Room
 from src.app.v1.user.entity.student import Student
+from src.app.v1.user.entity.teacher import Teacher
 from src.app.v1.user.entity.study_group import StudyGroup
 from src.app.v1.user.entity.user import User
 from src.app.v1.chat.entity.room import Room
@@ -323,48 +325,68 @@ class RoomRepository:
                 raise HTTPException(status_code=500, detail="{e}")
 
     @staticmethod
-    async def get_students_by_teacher(teacher_id: int):
+    async def get_teacher_and_students(user_id: int):
         async with SessionLocal() as session:
             try:
-                student_query = (
+                # 1. Get teacher info
+                teacher_query = (
+                    select(Teacher.id.label("teacher_id"), User.profile_image.label("teacher_image_url"), Tag.nickname.label("teacher_nickname"))
+                    .join(User, Teacher.user_id == User.id)
+                    .join(Tag, User.id == Tag.user_id)
+                    .where(User.id == user_id)
+                )
+
+                # 2. 최신 Room ID를 가져오는 서브쿼리
+                latest_rooms_subq = (
                     select(
-                        User.id.label("student_id"),
-                        User.profile_image.label("student_image_url"),
-                        Tag.nickname.label("student_nickname"),
+                        Participant.student_id,
                         Room.id.label("room_id"),
                         Room.help_checked,
-                        func.count(Room.id).label("room_count"),
+                        Room.updated_at,
                     )
-                    .join(Participant, Participant.student_id == User.id)
-                    .join(Tag, Tag.user_id == User.id)
-                    .join(Room, Room.id == Participant.room_id)
-                    .where(Participant.teacher_id == teacher_id)
-                    .group_by(User.id, Tag.nickname, Room.id)
-                )
-                students_result = await session.execute(student_query)
-                return students_result.fetchall()
-            except SQLAlchemyError as e:
-                logger.error(f"Database error in get_teacher_info: {e}")
-                raise HTTPException(status_code=500, detail="DB 오류 발생")
-
-    @staticmethod
-    async def fetch_teacher_info(teacher_id: int):
-        async with SessionLocal() as session:
-            try:
-                teacher_query = (
-                    select(User.profile_image.label("teacher_image_url"), Tag.nickname.label("teacher_nickname"))
-                    .join(Tag, Tag.user_id == User.id)
-                    .where(User.id == teacher_id)
+                    .join(Room, Participant.room_id == Room.id)
+                    .where(
+                        and_(
+                            Participant.teacher_id == user_id,   # 해당 선생님과 연결된 Room
+                            Room.help_checked.is_(True),        # help_checked가 True인 Room
+                        )
+                    )
+                    .distinct(Participant.student_id)           # 학생별로 한 개의 Room만 선택
+                    .order_by(Participant.student_id, Room.updated_at.desc())  # 최신 Room 우선 정렬
+                    .subquery()
                 )
 
+                # 3. 학생 정보와 Room 정보를 조회
+                student_query = (
+                    select(
+                        Student.user_id.label("student_id"),
+                        User.profile_image.label("student_image_url"),
+                        Tag.nickname.label("student_nickname"),
+                        func.coalesce(latest_rooms_subq.c.room_id, None).label("room_id"),
+                        func.coalesce(latest_rooms_subq.c.help_checked, None).label("help_checked"),
+                    )
+                    .select_from(Teacher)
+                    .join(StudyGroup, StudyGroup.teacher_id == Teacher.id)
+                    .join(Student, Student.id == StudyGroup.student_id)
+                    .join(User, Student.user_id == User.id)
+                    .join(Tag, User.id == Tag.user_id)
+                    .outerjoin(latest_rooms_subq, Student.user_id == latest_rooms_subq.c.student_id)
+                    .where(Teacher.user_id == user_id)
+                )
+                # Execute queries
                 teacher_result = await session.execute(teacher_query)
-                return teacher_result.first()
+                student_result = await session.execute(student_query)
+
+                return {"teacher": teacher_result.first(), "students": student_result.all()}
             except SQLAlchemyError as e:
-                logger.error(f"Database error in get_teacher_info: {e}")
-                raise HTTPException(status_code=500, detail="DB 오류 발생")
+                logger.error(f"Database error occurred while fetching teacher ID: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+            except Exception as e:
+                logger.error(f"An unexpected error occurred: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
 
     # @staticmethod
-    # async def get_students_each_room(teacher_id: int) -> TeacherStudentResponse:
+    # async def get_students_by_teacher(teacher_id: int):
     #     async with SessionLocal() as session:
     #         try:
     #             student_query = (
@@ -382,44 +404,27 @@ class RoomRepository:
     #                 .where(Participant.teacher_id == teacher_id)
     #                 .group_by(User.id, Tag.nickname, Room.id)
     #             )
+    #             students_result = await session.execute(student_query)
+    #             return students_result.fetchall()
+    #         except SQLAlchemyError as e:
+    #             logger.error(f"Database error in get_teacher_info: {e}")
+    #             raise HTTPException(status_code=500, detail="DB 오류 발생")
 
-    #             # 교사 정보 쿼리
+    # @staticmethod
+    # async def fetch_teacher_info(teacher_id: int):
+    #     async with SessionLocal() as session:
+    #         try:
     #             teacher_query = (
     #                 select(User.profile_image.label("teacher_image_url"), Tag.nickname.label("teacher_nickname"))
     #                 .join(Tag, Tag.user_id == User.id)
     #                 .where(User.id == teacher_id)
     #             )
 
-    #             students_result = await session.execute(student_query)
     #             teacher_result = await session.execute(teacher_query)
-
-    #             students_result = students_result.fetchall()
-    #             teacher_result = teacher_result.first()
-
-    #             # 결과 정리
-    #             students_info = {}
-    #             for row in students_result:
-    #                 student_id = row.student_id
-    #                 if student_id not in students_info:
-    #                     students_info[student_id] = StudentInfo(
-    #                         student_id=student_id, student_image_url=row.student_image_url, student_nickname=row.student_nickname, rooms=[]
-    #                     )
-    #                 students_info[student_id].rooms.append(RoomInfo(room_id=row.room_id, help_checked=row.help_checked))
-
-    #             teacher_info = TeacherInfo(
-    #                 teacher_id=teacher_id,
-    #                 teacher_image_url=(teacher_result.teacher_image_url if teacher_result else None) or "default_teacher_image.jpg",
-    #                 teacher_nickname=teacher_result.teacher_nickname if teacher_result else "Unknown",
-    #             )
-
-    #             return TeacherStudentResponse(teacher=teacher_info, students=list(students_info.values()))
-
+    #             return teacher_result.first()
     #         except SQLAlchemyError as e:
-    #             logger.error(f"Database error occurred while fetching teacher ID: {e}")
+    #             logger.error(f"Database error in get_teacher_info: {e}")
     #             raise HTTPException(status_code=500, detail="DB 오류 발생")
-    #         except Exception as e:
-    #             logger.error(f"An unexpected error occurred: {e}")
-    #             raise HTTPException(status_code=500, detail="{e}")
 
     @staticmethod
     async def get_room_help_list(mongo: AIOEngine, user_id: int) -> list[RoomHelpResponse] | None:
@@ -477,7 +482,7 @@ class RoomRepository:
 
             except SQLAlchemyError as e:
                 logger.error(f"Database error occurred while fetching teacher ID: {e}")
-                raise HTTPException(status_code=500, detail="DB 오류 발생")
+                raise HTTPException(status_code=500, detail=str(e))
             except Exception as e:
                 logger.error(f"An unexpected error occurred: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
