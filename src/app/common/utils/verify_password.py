@@ -39,3 +39,11 @@ def verify_password(password: str, hashed_password: str) -> bool:
         return ph.verify(hashed_password, password)
     except VerifyMismatchError:
         return False
+
+def generate_random_password(length: int = 12) -> str:
+    return "".join(random.choices(string.ascii_letters + string.digits, k=length))
+
+def generate_random_social_password() -> str:
+    random_password = generate_random_password()
+    hashed_password = hash_password(random_password)
+    return hashed_password

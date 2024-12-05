@@ -193,7 +193,6 @@ async def social_login_callback(
     return result
 
 
-
 @router.patch("/social/info/student", response_model=MessageResponse)
 async def additional_student_info(
     payload: SocialLoginStudentRequest,

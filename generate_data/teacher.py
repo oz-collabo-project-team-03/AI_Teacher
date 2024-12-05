@@ -82,6 +82,11 @@ def generate_unique_nickname():
             generated_nicknames.add(nickname)
             return nickname
 
+def generate_ordered_profile_image() -> str:
+    base_url = "https://kr.object.ncloudstorage.com/backendsam/profile_image/"
+    image_number = random.randint(1, 3)  # 1부터 3 사이의 숫자를 랜덤으로 선택
+    return f"{base_url}teacherIcon{image_number}.png"
+
 
 # Teacher 데이터 생성 제너레이터
 async def generate_teacher_data(num_teachers: int = 5):
@@ -94,7 +99,7 @@ async def generate_teacher_data(num_teachers: int = 5):
             "email": f"{random_string(5)}@example.com",
             "phone": f"010{random.randint(10000000, 99999999)}",
             "password": hash_password(plain_password),  # Argon2 해싱된 비밀번호
-            "profile_image": None,
+            "profile_image": generate_ordered_profile_image(),
             "social_provider": None,
             "first_login": False,  # 선생님은 무조건 False
             "role": "teacher",  # UserRole Enum 값

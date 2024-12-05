@@ -55,6 +55,7 @@ class OAuthRepository:
 
     @staticmethod
     def format_phone_number(phone: str) -> str:
+        phone = phone.replace("-", "")
         if bool(re.match(r"^010\d{4}\d{4}$", phone)):
             return phone
         if phone.startswith("+82 "):

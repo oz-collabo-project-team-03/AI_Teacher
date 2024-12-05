@@ -39,6 +39,11 @@ def generate_ordered_phone():
     phone_counter += 1
     return phone
 
+def generate_ordered_profile_image() -> str:
+    base_url = "https://kr.object.ncloudstorage.com/backendsam/profile_image/"
+    image_number = random.randint(1, 10)  # 1부터 10 사이의 숫자를 랜덤으로 선택
+    return f"{base_url}studentIcon{image_number}.png"
+
 
 # 닉네임 생성
 def generate_ordered_nickname():
@@ -95,7 +100,7 @@ async def generate_student_data(num_students: int = 50):
             "email": generate_ordered_email(),
             "phone": generate_ordered_phone(),
             "password": hash_password(plain_password),
-            "profile_image": None,
+            "profile_image": generate_ordered_profile_image(),
             "social_provider": None,
             "first_login": False,
             "role": "student",  # 학생

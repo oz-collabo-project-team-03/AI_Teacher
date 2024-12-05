@@ -20,6 +20,7 @@ from src.app.common.utils.dependency import get_session
 from src.app.common.utils.redis_utils import save_to_redis, get_redis_key_refresh_token, get_redis_key_jti, \
     get_from_redis
 from src.app.common.utils.security import create_refresh_token, create_access_token, verify_access_token
+from src.app.common.utils.verify_password import generate_random_social_password
 from src.app.v1.auth.repository.oauth_repository import OAuthRepository
 from src.app.v1.user.entity.organization import Organization
 from src.app.v1.user.entity.student import Student
@@ -231,7 +232,7 @@ class OAuthService:
                 external_id=ulid(),
                 email=user_info.get("email"),
                 phone=self.oauth_repo.format_phone_number(str(user_info.get("phone"))),
-                password="SOCIAL_LOGIN",
+                password=generate_random_social_password(),
                 role=role,
                 social_provider=provider,
                 is_privacy_accepted=True,
