@@ -1,5 +1,6 @@
 import logging
 from fastapi import HTTPException
+from pydantic import HttpUrl, ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -350,62 +351,37 @@ class UserRepository:
         except Exception as e:
             logger.error(f"Error fetching posts for user ID {user_id}: {str(e)}")
             raise
+    @staticmethod
+    def validate_url(url: str):
+        try:
+            HttpUrl.validate(url)  # type: ignore
+            return True
+        except ValidationError:
+            logger.error(f"Invalid URL format: {url}")
+            return False
 
-    # 학생 프로필 업데이트
-    async def update_student_profile(self, user_id: int, update_data: dict, session: AsyncSession) -> bool:
-        user = await self.get_user_with_profile(user_id, session)
-        if not user:
-            logger.warning(f"User with ID {user_id} not found.")
-            raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
+    async def get_students_profile(self, user_id: int, session: AsyncSession):
+        query = (
+            select(User)
+            .options(
+                joinedload(User.student),
+                joinedload(User.tag)
+            )
+            .where(User.id == user_id)
+        )
+        result = await session.execute(query)
+        user = result.scalar_one_or_none()
+        return user
 
-        if "nickname" in update_data:
-            if user.tag:
-                user.tag.nickname = update_data["nickname"]
-            else:
-                new_tag = Tag(user_id=user.id, nickname=update_data["nickname"])
-                session.add(new_tag)
-
-        if "profile_image" in update_data:
-            user.profile_image = update_data["profile_image_url"]
-
-        if user.student:
-            student = user.student
-            if "career_aspiration" in update_data:
-                student.career_aspiration = update_data["career_aspiration"]
-            if "interest" in update_data:
-                student.interest = update_data["interest"]
-            if "description" in update_data:
-                student.description = update_data["description"]
-
-        logger.info(f"User profile updated successfully for user_id={user_id}")
-        return True
-
-    # 교사 프로필 변경
-    async def update_teacher_profile(self, user_id: int, profile_data: dict, session: AsyncSession) -> bool:
-        user = await self.get_user_with_profile(user_id, session)
-        if not user:
-            print(f"User with ID {user_id} not found.")
-            raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-
-        if "nickname" in profile_data:
-            if user.tag:
-                user.tag.nickname = profile_data["nickname"]
-            else:
-                new_tag = Tag(user_id=user.id, nickname=profile_data["nickname"])
-                session.add(new_tag)
-
-        if "profile_image" in profile_data:
-            user.profile_image = profile_data["profile_image_url"]
-
-        if user.teacher and user.teacher.organization:
-            organization = user.teacher.organization
-            if "organization_name" in profile_data:
-                organization.name = profile_data["organization_name"]
-            if "organization_type" in profile_data:
-                organization.type = profile_data["organization_type"]
-            if "organization_position" in profile_data:
-                organization.position = profile_data["organization_position"]
-
-        await session.flush()
-        print(f"Teacher profile updated successfully for user_id={user_id}")
-        return True
+    async def get_teachers_profile(self, user_id: int, session: AsyncSession):
+        query = (
+            select(User)
+            .options(
+                joinedload(User.teacher).joinedload(Teacher.organization),
+                joinedload(User.tag)
+            )
+            .where(User.id == user_id)
+        )
+        result = await session.execute(query)
+        user = result.scalar_one_or_none()
+        return user

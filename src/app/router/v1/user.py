@@ -65,7 +65,7 @@ async def update_teacher_profile(
 ):
     return await user_service.update_teacher_profile(
         user_id=current_user["user_id"],
-        profile_data=request.dict(exclude_unset=True),
+        update_data=request.dict(exclude_unset=True),
         session=session,
     )
 
