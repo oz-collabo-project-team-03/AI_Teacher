@@ -177,8 +177,8 @@ async def login(provider: str):
 @router.post("/login/callback/{provider}")
 async def social_login_callback(
         response: Response,
+        code: str,
         provider: str = Path(...),
-        code: str = Query(...),
         session: AsyncSession = Depends(get_session),
 ):
     logger.info(f"Social login callback initiated for provider: {provider}")
