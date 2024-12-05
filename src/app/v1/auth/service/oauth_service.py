@@ -182,15 +182,17 @@ class OAuthService:
             raise HTTPException(status_code=500, detail=f"사용자 데이터 구문 분석 오류{e}")
 
     async def login_social_user(self, saved_user: User, response: Response):
-
+        # pdb.set_trace()
         external_id = saved_user.external_id
         jti = str(uuid.uuid4())
         access_token = create_access_token(
-            {"sub": saved_user.id, "jti": jti}, expires_delta=timedelta(minutes=45)
+            {"sub": saved_user.id, "jti": jti, "role": saved_user.role}, expires_delta=timedelta(minutes=45)
         )
         refresh_token = create_refresh_token({"sub": saved_user.id}, expires_delta=timedelta(days=7))
         await save_to_redis(get_redis_key_jti(jti), "used", 45 * 60)
         await save_to_redis(get_redis_key_refresh_token(saved_user.id), refresh_token, expiry=7 * 24 * 3600)
+
+
 
         response.set_cookie(
             key="refresh_token",
@@ -201,17 +203,21 @@ class OAuthService:
             max_age=7 * 24 * 3600,
         )
 
+        first_login = saved_user.first_login
+        social = saved_user.social_provider is not None
+
         return {
             "id": saved_user.id,
             "access_token": access_token,
+            "refresh_token": refresh_token, # 테스트 용
             "token_type": "Bearer",
             "expires_in": 45 * 60,
+            "first_login": first_login,
+            "social": social,
             "message": "소셜 로그인에 성공했습니다.",
         }
 
     async def save_user_info(self, provider: str, user_info: dict, session: AsyncSession):
-
-
         role = user_info.get("role", UserRole.STUDENT)
         # pdb.set_trace()
         user = await self.oauth_repo.get_user_by_email(
@@ -235,38 +241,31 @@ class OAuthService:
         return user
 
     async def update_student_info(self, payload: SocialLoginStudentRequest, user_id: int, session: AsyncSession):
-        try:
-            user = await self.oauth_repo.get_user_with_info(user_id, session)
-            if not user:
-                raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+        user = await self.oauth_repo.get_user_with_info(user_id, session)
+        if not user:
+            raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
-            if not user.first_login:
-                raise HTTPException(status_code=400, detail="이미 2번 이상 로그인을 진행한 사용자입니다.")
+        if not user.first_login:
+            raise HTTPException(status_code=400, detail="이미 2번 이상 로그인을 진행한 사용자입니다.")
 
-            updated_user = await self.oauth_repo.update_student(user_id, payload.dict(), session)
+        updated_user = await self.oauth_repo.update_student(user_id, payload.dict(), session)
 
-            return {"detail": "학생 프로필이 성공적으로 업데이트되었습니다."}
-        except IntegrityError as e:
-            raise HTTPException(status_code=500, detail=f"데이터베이스 오류가 발생했습니다: {str(e)}")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return {"message": "학생 프로필이 성공적으로 업데이트되었습니다."}
+
 
     async def update_teacher_info(self, payload: SocialLoginTeacherRequest, user_id: int, session: AsyncSession):
-        try:
-            user = await self.oauth_repo.get_user_with_info(user_id, session)
-            if not user:
-                raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+        user = await self.oauth_repo.get_user_with_info(user_id, session)
+        if not user:
+            raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
-            if not user.first_login:
-                raise HTTPException(status_code=400, detail="이미 2번 이상 로그인을 진행한 사용자입니다.")
+        if not user.first_login:
+            raise HTTPException(status_code=400, detail="이미 2번 이상 로그인을 진행한 사용자입니다.")
 
-            updated_user = await self.oauth_repo.update_teacher(user_id, payload.dict(), session)
+        user.role = UserRole.TEACHER
 
-            return {"detail": "선생님 프로필이 성공적으로 업데이트되었습니다."}
-        except IntegrityError as e:
-            raise HTTPException(status_code=500, detail=f"데이터베이스 오류가 발생했습니다: {str(e)}")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        updated_user = await self.oauth_repo.update_teacher(user_id, payload.dict(), session)
+
+        return {"message": "선생님 프로필이 성공적으로 업데이트되었습니다."}
 
     # async def additional_user_info(
     #         self,
