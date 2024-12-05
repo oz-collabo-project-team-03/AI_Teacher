@@ -493,21 +493,24 @@ class UserService:
             posts = await self.user_repo.get_posts_by_user(user_id, session)
             posts_data = [
                 PostResponse(
-                    post_id=post.external_id,
-                    post_image=post.images[0].image_path if post.images else None,
+                    post_id=post_datas["external_id"],
+                    post_image=post_datas["images"][0] if post_datas["images"] else None,
                 )
-                for post in posts
+                for post_datas in posts.values()
             ]
+            # like_count와 comment_count 계산
+            like_count = sum(post_data['post'].like_count for post_data in posts.values())  # 'post' 객체에서 like_count 접근
+            comment_count = sum(post_data['post'].comment_count for post_data in posts.values())  # 'post' 객체에서 comment_count 접근
 
-            role = user.role
+            role=user.role
             common_data = CommonProfileResponse(
                 role=role,
                 id=user.id,
                 nickname=user.tag.nickname,
                 profile_image=user.profile_image,
                 post_count=len(posts_data),
-                like_count=sum(post.like_count for post in posts),
-                comment_count=sum(post.comment_count for post in posts),
+                like_count=like_count,
+                comment_count=comment_count,
             )
             # 학생 프로필 생성
             if role == UserRole.STUDENT.value:
