@@ -1,18 +1,17 @@
 import logging
 from fastapi import HTTPException
-from sqlalchemy import delete
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncResult, AsyncSession
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload, selectinload
 from ulid import ulid  # type: ignore
 
 from src.app.common.models.tag import Tag
+from src.app.common.models.image import Image
 from src.app.common.utils.consts import UserRole
 from src.app.common.utils.verify_password import (
     hash_password,
 )
-from src.app.v1.comment.entity.comment import Comment
 from src.app.v1.post.entity.post import Post
 from src.app.v1.post.entity.post_image import PostImage
 from src.app.v1.user.entity.organization import Organization
@@ -58,7 +57,6 @@ class UserRepository:
             logger.debug(f"Query result: {user}")
             return user
 
-
         except HTTPException as e:
             print(f"HTTPException 발생: {e.status_code}, {e.detail}")
             raise e
@@ -90,9 +88,7 @@ class UserRepository:
         async with session.begin():
             try:
                 if nickname := user_data.get("nickname"):
-                    existing_nickname = await session.execute(
-                        select(Tag).where(Tag.nickname == nickname)
-                    )
+                    existing_nickname = await session.execute(select(Tag).where(Tag.nickname == nickname))
                     if existing_nickname.scalar():
                         raise HTTPException(status_code=400, detail="중복된 닉네임이 존재합니다.")
 
@@ -138,14 +134,11 @@ class UserRepository:
                 print(f"400 에러 반환: {detail}")
                 raise HTTPException(status_code=400, detail=detail)
 
-
     async def create_teacher(self, session: AsyncSession, user_data: dict, teacher_data: dict):
         async with session.begin():
             try:
                 if nickname := user_data.get("nickname"):
-                    existing_nickname = await session.execute(
-                        select(Tag).where(Tag.nickname == nickname)
-                    )
+                    existing_nickname = await session.execute(select(Tag).where(Tag.nickname == nickname))
                     if existing_nickname.scalar():
                         raise HTTPException(status_code=400, detail="중복된 닉네임이 존재합니다.")
 
@@ -192,7 +185,6 @@ class UserRepository:
                     detail = "중복된 데이터가 감지되었습니다."
 
                 raise HTTPException(status_code=400, detail=detail)
-
 
     async def reset_user_password(self, session: AsyncSession, email: str, temp_password: str):
         async with session.begin():
@@ -245,13 +237,11 @@ class UserRepository:
         result = await session.execute(query)
         return result.scalar()
 
-
     async def create_study_group(self, session: AsyncSession, student_id: int, teacher_id: int):
         new_group = StudyGroup(student_id=student_id, teacher_id=teacher_id)
         session.add(new_group)
         await session.commit()
         return new_group
-
 
     # 교사 회원정보 조회 -> 이메일, 패스워드, 전화번호
     async def get_teacher_info(self, session: AsyncSession, user_id: int) -> dict:
@@ -261,13 +251,11 @@ class UserRepository:
             raise HTTPException(status_code=404, detail="교사 정보를 찾을 수 없습니다.")
 
         teacher_info = {
-
             "password": user.password,
             "phone": user.phone,
         }
         logger.info(f"교사 정보 조회 성공: user_id={user_id}, teacher_info={teacher_info}")
         return teacher_info
-
 
     async def get_student_info(self, session: AsyncSession, user_id: int) -> dict:
         user = await self.get_user_by_id(session, user_id)
@@ -289,7 +277,6 @@ class UserRepository:
         logger.info(f"학생 정보 조회 성공: user_id={user_id}, student_info={student_info}")
         return student_info
 
-
     async def update_teacher_info(self, session: AsyncSession, user_id: int, update_data: dict):
         async with session.begin():
             user = await self.get_user_by_id(session, user_id)
@@ -299,8 +286,6 @@ class UserRepository:
 
             for field, value in update_data.items():
                 setattr(user, field, value)
-
-
 
     async def update_student_info(self, session: AsyncSession, user_id: int, common_fields: dict, student_fields: dict):
         async with session.begin():
@@ -320,7 +305,7 @@ class UserRepository:
             for field, value in student_fields.items():
                 setattr(student, field, value)
 
-      # 프로필 조회
+    # 프로필 조회
     async def get_user_with_profile(self, user_id: int, session: AsyncSession):
         query = (
             select(User)
@@ -339,22 +324,29 @@ class UserRepository:
 
     async def get_posts_by_user(self, user_id: int, session: AsyncSession):
         try:
-            query = select(Post, PostImage).join(PostImage, PostImage.post_id == Post.id, isouter=True).where(Post.author_id == user_id)
+            query = (
+                select(Post.external_id, Post, Image.image_path)
+                .join(PostImage, PostImage.post_id == Post.id, isouter=True)
+                .join(Image, Image.id == PostImage.image_id, isouter=True)  # Image와 조인 추가
+                .where(Post.author_id == user_id)
+            )
             result = await session.execute(query)
             rows = result.fetchall()
 
             posts = {}
-            for post, image in rows:
+            for external_id, post, image_path in rows:
                 if post.id not in posts:
                     posts[post.id] = {
+                        "external_id": external_id,
                         "post": post,
                         "images": [],
                     }
-                if image:
-                    posts[post.id]["images"].append(image)
+                if image_path:
+                    posts[post.id]["images"].append(image_path)
 
             logger.info(f"Retrieved {len(posts)} posts for user ID {user_id}")
-            return list(posts.values())
+            return posts
+            # return list(posts.values())
         except Exception as e:
             logger.error(f"Error fetching posts for user ID {user_id}: {str(e)}")
             raise
@@ -388,8 +380,7 @@ class UserRepository:
         logger.info(f"User profile updated successfully for user_id={user_id}")
         return True
 
-
-    #교사 프로필 변경
+    # 교사 프로필 변경
     async def update_teacher_profile(self, user_id: int, profile_data: dict, session: AsyncSession) -> bool:
         user = await self.get_user_with_profile(user_id, session)
         if not user:
@@ -418,4 +409,3 @@ class UserRepository:
         await session.flush()
         print(f"Teacher profile updated successfully for user_id={user_id}")
         return True
-
