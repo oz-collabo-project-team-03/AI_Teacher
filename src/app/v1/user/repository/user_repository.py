@@ -374,7 +374,7 @@ class UserRepository:
                 session.add(new_tag)
 
         if "profile_image" in update_data:
-            user.profile_image = update_data["profile_image"]
+            user.profile_image = update_data["profile_image_url"]
 
         if user.student:
             student = user.student
@@ -404,7 +404,7 @@ class UserRepository:
                 session.add(new_tag)
 
         if "profile_image" in profile_data:
-            user.profile_image = profile_data["profile_image"]
+            user.profile_image = profile_data["profile_image_url"]
 
         if user.teacher and user.teacher.organization:
             organization = user.teacher.organization

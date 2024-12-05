@@ -156,27 +156,30 @@ class OAuthService:
         return self.map_user_info(provider, user_data)
 
     def map_user_info(self, provider: str, user_data: dict) -> dict:
-        if provider == "kakao":
-            return {
-                "id": user_data.get("id"),
-                "email": user_data.get("kakao_account", {}).get("email"),
-                "phone": user_data.get("kakao_account", {}).get("phone_number"),
-            }
-        elif provider == "google":
-            return {
-                "id": user_data.get("id"),
-                "email": user_data.get("email"),
-                "phone": user_data.get("phone"),
-            }
-        elif provider == "naver":
-            response_data = user_data.get("response", {})
-            return {
-                "id": response_data.get("id"),
-                "email": response_data.get("email"),
-                "phone": response_data.get("mobile"),
-            }
-        else:
-            raise HTTPException(status_code=400, detail="지원하지 않는 provider입니다.")
+        try:
+            if provider == "kakao":
+                return {
+                    "id": user_data.get("id"),
+                    "email": user_data.get("kakao_account", {}).get("email"),
+                    "phone": user_data.get("kakao_account", {}).get("phone_number"),
+                }
+            elif provider == "google":
+                return {
+                    "id": user_data.get("id"),
+                    "email": user_data.get("email"),
+                    "phone": user_data.get("phone"),
+                }
+            elif provider == "naver":
+                response_data = user_data.get("response", {})
+                return {
+                    "id": response_data.get("id"),
+                    "email": response_data.get("email"),
+                    "phone": response_data.get("mobile"),
+                }
+            else:
+                raise HTTPException(status_code=400, detail="지원하지 않는 provider입니다.")
+        except KeyError as e:
+            raise HTTPException(status_code=500, detail=f"사용자 데이터 구문 분석 오류{e}")
 
     async def login_social_user(self, saved_user: User, response: Response):
 
@@ -201,37 +204,6 @@ class OAuthService:
         return {
             "external_id": external_id,
             "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "Bearer",
-            "expires_in": 45 * 60,
-            "message": "소셜 로그인에 성공했습니다.",
-        }
-
-        if saved_user.deactivated_at:
-            raise HTTPException(status_code=400, detail="비활성화된 사용자입니다.")
-
-        jti = str(uuid.uuid4())
-        access_token = create_access_token(
-            {"sub": saved_user.id, "jti": jti}, expires_delta=timedelta(minutes=45)
-        )
-        refresh_token = create_refresh_token({"sub": saved_user.id}, expires_delta=timedelta(days=7))
-
-        await save_to_redis(get_redis_key_jti(jti), "used", 45 * 60)
-        await save_to_redis(get_redis_key_refresh_token(saved_user.id), refresh_token, expiry=7 * 24 * 3600)
-
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            secure=True,
-            samesite="Strict",  # type: ignore
-            max_age=7 * 24 * 3600,
-        )
-
-        return {
-            "id": saved_user.id,
-            "access_token": access_token,
-            "refresh_token": refresh_token, # 테스트용
             "token_type": "Bearer",
             "expires_in": 45 * 60,
             "message": "소셜 로그인에 성공했습니다.",
