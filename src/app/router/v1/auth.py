@@ -181,28 +181,17 @@ async def social_login_callback(
         provider: str = Path(...),
         session: AsyncSession = Depends(get_session),
 ):
-    logger.info(f"Social login callback initiated for provider: {provider}")
     code = body.code
 
-    try:
-        token_data = await oauth_service.get_access_token(provider, code)
-        access_token = token_data.get("access_token")
-        logger.info(f"Access token retrieved: {access_token}")
+    token_data = await oauth_service.get_access_token(provider, code)
+    access_token = token_data.get("access_token")
+    user_info = await oauth_service.get_user_info(provider, access_token)
+    saved_user = await oauth_service.save_user_info(provider, user_info, session)
+    result = await oauth_service.login_social_user(saved_user, response)
 
-        user_info = await oauth_service.get_user_info(provider, access_token)
-        logger.info(f"User info retrieved: {user_info}")
+    return result
 
-        saved_user = await oauth_service.save_user_info(provider, user_info, session)
-        logger.info(f"User info saved: {saved_user}")
 
-        result = await oauth_service.login_social_user(saved_user, response)
-        logger.info(f"Login successful for user: {saved_user.email}")
-
-        return result
-
-    except Exception as e:
-        logger.error(f"An error occurred during social login callback: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.patch("/social/info/student", response_model=MessageResponse)
 async def additional_student_info(

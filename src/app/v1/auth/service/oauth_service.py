@@ -202,7 +202,7 @@ class OAuthService:
         )
 
         return {
-            "external_id": external_id,
+            "id": saved_user.id,
             "access_token": access_token,
             "token_type": "Bearer",
             "expires_in": 45 * 60,

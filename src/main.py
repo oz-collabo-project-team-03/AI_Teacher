@@ -13,7 +13,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
-from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
+from aiokafka import AIOKafkaProducer, AIOKafkaConsumer  # type: ignore
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from src.app.common.utils.websocket_manager import manager
