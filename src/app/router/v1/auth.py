@@ -9,7 +9,7 @@ from src.app.common.utils.dependency import get_current_user, get_session
 from src.app.common.utils.image import NCPStorageService  # type: ignore
 
 from src.app.v1.auth.repository.oauth_repository import OAuthRepository
-from src.app.v1.auth.schema.requestDto import SocialLoginStudentRequest, SocialLoginTeacherRequest
+from src.app.v1.auth.schema.requestDto import SocialLoginStudentRequest, SocialLoginTeacherRequest, OAuthRequest
 from src.app.v1.auth.schema.responseDto import SocialLoginResponse
 from src.app.v1.auth.service.oauth_service import OAuthService
 from src.app.v1.user.repository.user_repository import UserRepository
@@ -177,12 +177,12 @@ async def login(provider: str):
 @router.post("/login/callback/{provider}")
 async def social_login_callback(
         response: Response,
-        code: str,
+        body: OAuthRequest,
         provider: str = Path(...),
         session: AsyncSession = Depends(get_session),
 ):
     logger.info(f"Social login callback initiated for provider: {provider}")
-    logger.info(f"Received code: {code}")
+    code = body.code
 
     try:
         token_data = await oauth_service.get_access_token(provider, code)

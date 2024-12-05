@@ -134,3 +134,7 @@ class SocialLoginTeacherRequest(BaseModel):
     organization_name: str
     organization_type: str
     position: str
+
+class OAuthRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    code: str
