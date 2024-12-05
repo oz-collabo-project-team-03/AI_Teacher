@@ -339,7 +339,7 @@ class PostRepository:
 
                 post_data = {
                     "nickname": tag.nickname,
-                    "user_id": user.external_id,
+                    "user_id": user.id,
                     "profile_image": user.profile_image,
                     "career_aspiration": student.career_aspiration,
                     "interest": student.interest,
@@ -376,7 +376,7 @@ class PostRepository:
 
         async with SessionLocal() as session:
             # 전체 게시글 수 조회 (해당 사용자의)
-            user_query = select(User.id).where(User.external_id == user_id)
+            user_query = select(User.id).where(User.id == int(user_id))
             user_result = await session.execute(user_query)
             internal_user_id = user_result.scalar_one_or_none()
 
@@ -443,7 +443,7 @@ class PostRepository:
 
                 post_data = {
                     "nickname": tag.nickname,
-                    "user_id": user.external_id,
+                    "user_id": user.id,
                     "profile_image": user.profile_image,
                     "career_aspiration": student.career_aspiration,
                     "interest": student.interest,
