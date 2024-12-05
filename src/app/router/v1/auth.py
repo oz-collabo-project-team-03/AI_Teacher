@@ -167,11 +167,12 @@ async def create_study_group(
 
 
 # 로그인 엔드포인트 - 테스트
-@router.get("/login/{provider}")
-async def login(provider: str):
-    oauth_url = oauth_service.get_oauth_url(provider)
-    print(f"Generated OAuth URL: {oauth_url}")
-    return RedirectResponse(oauth_url)
+# @router.get("/login/{provider}")
+# async def login(provider: str):
+#     oauth_url = oauth_service.get_oauth_url(provider)
+#     print(f"Generated OAuth URL: {oauth_url}")
+#     return RedirectResponse(oauth_url)
+
 
 # Callback 엔드포인트
 @router.post("/login/callback/{provider}")

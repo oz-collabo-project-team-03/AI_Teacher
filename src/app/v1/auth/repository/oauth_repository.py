@@ -103,7 +103,7 @@ class OAuthRepository:
                 setattr(student, key, value)
 
         user.first_login = False
-        await session.flush()
+        await session.commit()
         return user
 
     async def update_teacher(self, user_id: int, teacher_data: dict, session: AsyncSession) -> User:
@@ -120,15 +120,20 @@ class OAuthRepository:
         if user.teacher and user.teacher.organization:
             organization = user.teacher.organization
         else:
+            if not user.teacher:
+                teacher = Teacher(user_id=user.id)
+                session.add(teacher)
+                user.teacher = teacher
+
             organization = Organization(teacher=user.teacher)
             session.add(organization)
 
-        for key, value in teacher_data.items():
-            if hasattr(organization, key):
-                setattr(organization, key, value)
+        organization.name = teacher_data.get("organization_name")
+        organization.type = teacher_data.get("organization_type")
+        organization.position = teacher_data.get("position")
 
         user.first_login = False
-        await session.flush()
+        await session.commit()
         return user
 
     # async def update_student(self, user_id: int, student_data: dict, session: AsyncSession) -> User:

@@ -17,10 +17,10 @@ SECRET_KEY = os.getenv("SECRET_KEY", "default_secret_key")
 ALGORITHM = "HS256"
 
 
-def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes=15)):
+def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes=45)):
     to_encode = data.copy()
     expire = datetime.now() + expires_delta
-    to_encode.update({"exp": int(expire.timestamp()), "jti": str(uuid.uuid4())})
+    to_encode.update({"exp": int(expire.timestamp())})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
