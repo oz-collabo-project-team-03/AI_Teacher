@@ -17,7 +17,7 @@ from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from src.app.common.utils.websocket_manager import manager
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(level=logging.DEBUG)
@@ -94,6 +94,15 @@ app.include_router(comment_router)
 app.include_router(user_router)
 app.include_router(websocket_router)
 app.include_router(health_router)
+
+
+@app.middleware("http")
+async def cors_debugging(request: Request, call_next):
+    print(f"Request origin: {request.headers.get('origin')}")
+    response = await call_next(request)
+    print(f"Response CORS headers: {response.headers}")
+    return response
+
 
 origins = [
     "http://localhost:5173/",
