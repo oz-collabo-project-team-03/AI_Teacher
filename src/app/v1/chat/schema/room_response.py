@@ -89,8 +89,8 @@ class RoomMessagesListResponse(BaseModel):
         )
 
 
-class RoomInfo(BaseModel):
-    room_id: int
+class StudentInfo(BaseModel):
+    room_id: int | None = None
     student_id: int
     student_nickname: str
     student_image_url: str
@@ -99,13 +99,13 @@ class RoomInfo(BaseModel):
 
 class TeacherInfo(BaseModel):
     teacher_id: int
-    teacher_image_url: str | None
+    teacher_image_url: str
     teacher_nickname: str
 
 
-class TeacherStudentResponse(BaseModel):
+class TeacherStudentsResponse(BaseModel):
     teacher: TeacherInfo
-    rooms: list[RoomInfo]
+    students: list[StudentInfo]
 
 
 class RoomHelpResponse(BaseModel):

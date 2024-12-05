@@ -88,7 +88,7 @@ async def get_students(
     user_id = current_user.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=404, detail="User ID를 찾을 수 없습니다.")
-    return await room_service.get_students(user_id=user_id)
+    return await room_service.get_students(user_id=int(user_id))
 
 
 # 헬프 목록 조회
