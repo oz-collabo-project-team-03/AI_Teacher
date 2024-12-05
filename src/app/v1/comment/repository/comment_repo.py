@@ -5,9 +5,17 @@ from sqlalchemy.future import select
 from src.app.common.models.tag import Tag
 from src.app.v1.comment.entity.comment import Comment
 from src.app.v1.comment.entity.comment_tag import CommentTag
+from src.app.v1.post.entity.post import Post
 
 
 class CommentRepository:
+
+    async def get_post_id_from_external_id(self, session: AsyncSession, external_id: str) -> int | None:
+        """external_id로 실제 post_id를 조회"""
+        query = select(Post.id).where(Post.external_id == external_id)
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
+
     async def create_comment(self, session: AsyncSession, comment: Comment, tags: list[Tag]):
         session.add(comment)
         await session.flush()
