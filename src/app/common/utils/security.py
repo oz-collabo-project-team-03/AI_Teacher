@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import uuid
@@ -6,7 +5,7 @@ from datetime import datetime, timedelta
 
 import jwt
 from dotenv import load_dotenv
-from fastapi import HTTPException, status
+from fastapi import HTTPException, WebSocket, WebSocketException, status
 
 # 로그 설정
 logging.basicConfig(level=logging.INFO)
@@ -72,3 +71,27 @@ def verify_access_token(token: str) -> dict:
     except Exception as e:
         logger.error(f"Unknown error: {e}")
         raise HTTPException(status_code=500, detail="데이터베이스에 오류가 발생했습니다.")
+
+
+async def get_current_user_ws(websocket: WebSocket):
+    try:
+        # Authorization 헤더에서 토큰 추출 (Bearer 토큰)
+        auth_header = websocket.headers.get("authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return None
+
+        token = auth_header.split(" ")[1]
+        payload = verify_access_token(token)
+
+        user_id = payload.get("sub")
+        role = payload.get("role")
+
+        if not user_id or not role:
+            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid token")
+            # return None
+
+        return {"user_id": int(user_id), "role": role}
+    except Exception as e:
+        logger.error(f"Token verification failed: {str(e)}")
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=str(e))
+        # return None
