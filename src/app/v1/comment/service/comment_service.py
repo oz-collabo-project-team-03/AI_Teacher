@@ -49,6 +49,10 @@ class CommentService:
 
         await self.comment_repository.create_comment(session, comment, tags)
 
+        # 댓글 생성 후 comment_count 증가
+        is_parent = payload.parent_comment_id is None  # 대댓글이 아니면 True
+        await self.comment_repository.increment_comment_count(session, post_id, is_parent)
+
         # 닉네임 및 프로필 이미지 조회
         user_info = await self.comment_repository.get_user_info(session, author_id)
 
@@ -152,4 +156,10 @@ class CommentService:
                 if parent_comment:
                     parent_comment.recomment_count -= 1
                     session.add(parent_comment)
+
+            # 댓글 삭제
             await self.comment_repository.delete_comment(session, comment)
+
+            # 댓글 삭제 후 comment_count 감소
+            is_parent = comment.parent_comment_id is None  # 대댓글이 아니면 True
+            await self.comment_repository.decrement_comment_count(session, comment.post_id, is_parent)

@@ -71,3 +71,30 @@ class CommentRepository:
                 "user_id": row.external_id,  # external_id 추가
             }
         return {"nickname": "Anonymous", "profile_image": None, "user_id": None}
+
+    async def increment_comment_count(self, session: AsyncSession, post_id: int, is_parent: bool):
+        """댓글 생성 시 comment_count 증가 (대댓글 제외)"""
+        if not is_parent:  # 대댓글은 카운트하지 않음
+            return
+
+        query = select(Post).where(Post.id == post_id)
+        result = await session.execute(query)
+        post = result.scalar_one_or_none()
+        if post:
+            post.comment_count += 1
+            session.add(post)
+            await session.flush()
+
+    async def decrement_comment_count(self, session: AsyncSession, post_id: int, is_parent: bool):
+        """댓글 삭제 시 comment_count 감소 (대댓글 제외)"""
+        if not is_parent:  # 대댓글은 카운트하지 않음
+            return
+
+        query = select(Post).where(Post.id == post_id)
+        result = await session.execute(query)
+        post = result.scalar_one_or_none()
+        if post and post.comment_count > 0:  # 음수 방지
+            post.comment_count -= 1
+            session.add(post)
+            await session.flush()
+
