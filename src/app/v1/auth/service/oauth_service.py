@@ -231,12 +231,13 @@ class OAuthService:
         )
 
         if not user:
-
+            phone = user_info.get("phone")
+            formatted_phone = self.oauth_repo.format_phone_number(phone, provider)
 
             user = User(
                 external_id=ulid(),
                 email=user_info.get("email"),
-                phone=self.oauth_repo.format_phone_number(str(user_info.get("phone"))),
+                phone=formatted_phone,
                 password=generate_random_social_password(),
                 role=role,
                 social_provider=provider,
@@ -256,7 +257,7 @@ class OAuthService:
 
         updated_user = await self.oauth_repo.update_student(user_id, payload.dict(), session)
 
-        return {"message": "학생 프로필이 성공적으로 업데이트되었습니다."}
+        return {"message": "학생 회원정보가 성공적으로 업데이트되었습니다."}
 
 
     async def update_teacher_info(self, payload: SocialLoginTeacherRequest, user_id: int, session: AsyncSession):
@@ -271,69 +272,5 @@ class OAuthService:
 
         updated_user = await self.oauth_repo.update_teacher(user_id, payload.dict(), session)
 
-        return {"message": "선생님 프로필이 성공적으로 업데이트되었습니다."}
+        return {"message": "선생님 회원정보가 성공적으로 업데이트되었습니다."}
 
-    # async def additional_user_info(
-    #         self,
-    #         payload: Union[SocialLoginStudentRequest, SocialLoginTeacherRequest],
-    #         session: AsyncSession,
-    #         user_id: int,
-    # ):
-    #     try:
-    #         user = await self.oauth_repo.get_user_by_id(session=session, user_id=user_id)
-    #         if not user:
-    #             raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-    #
-    #         if user.first_login is False:
-    #             raise HTTPException(status_code=400, detail="이미 2번 이상 로그인을 진행한 사용자입니다.")
-    #
-    #         if payload.role == UserRole.STUDENT:
-    #             student_payload = SocialLoginStudentRequest(**payload.dict())
-    #             user_data = self._prepare_student_data(student_payload)
-    #             updated_user = await self.oauth_repo.update_student(user_id, user_data, session)
-    #
-    #         elif payload.role == UserRole.TEACHER:
-    #             teacher_payload = SocialLoginTeacherRequest(**payload.dict())
-    #             user_data = self._prepare_teacher_data(teacher_payload)
-    #             updated_user = await self.oauth_repo.update_teacher(user_id, user_data, session)
-    #
-    #         else:
-    #             raise HTTPException(status_code=400, detail="유효하지 않은 역할입니다.")
-    #
-    #         # updated_user.first_login =False
-    #         session.add(updated_user)
-    #         await session.commit()
-    #
-    #         return {"message": "추가 회원 정보가 저장되었습니다."}
-    #
-    #     except HTTPException:
-    #         raise
-    #     except IntegrityError as e:
-    #         raise HTTPException(status_code=500, detail=f"데이터베이스 오류가 발생했습니다.{str(e)}")
-    #     except Exception as e:
-    #         raise HTTPException(status_code=500, detail=str(e))
-    #
-    # def _prepare_student_data(self, payload: SocialLoginStudentRequest) -> dict:
-    #     return {
-    #         "role": UserRole.STUDENT,
-    #         "is_privacy_accepted": payload.is_privacy_accepted,
-    #         "student_data": {
-    #             "school": payload.school,
-    #             "grade": payload.grade,
-    #             "career_aspiration": payload.career_aspiration,
-    #             "interest": payload.interests,
-    #         },
-    #         "nickname": payload.nickname,
-    #     }
-    #
-    # def _prepare_teacher_data(self, payload: SocialLoginTeacherRequest) -> dict:
-    #     return {
-    #         "role": UserRole.TEACHER,
-    #         "is_privacy_accepted": payload.is_privacy_accepted,
-    #         "teacher_data": {
-    #             "organization_name": payload.organization_name,
-    #             "organization_type": payload.organization_type,
-    #             "position": payload.position,
-    #         },
-    #         "nickname": payload.nickname,
-    #     }

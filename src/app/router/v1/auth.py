@@ -173,7 +173,6 @@ async def create_study_group(
 #     print(f"Generated OAuth URL: {oauth_url}")
 #     return RedirectResponse(oauth_url)
 
-
 # Callback 엔드포인트
 @router.post("/login/callback/{provider}")
 async def social_login_callback(
