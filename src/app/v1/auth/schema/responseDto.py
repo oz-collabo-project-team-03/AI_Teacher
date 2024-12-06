@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 
@@ -42,4 +44,9 @@ class SocialLoginResponse(BaseModel):
     token_type: str
     expires_in: int
     role: str | None
+    message: str
+
+class RoleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    role: str
     message: str

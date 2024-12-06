@@ -257,7 +257,10 @@ class OAuthService:
 
         updated_user = await self.oauth_repo.update_student(user_id, payload.dict(), session)
 
-        return {"message": "학생 회원정보가 성공적으로 업데이트되었습니다."}
+        return {
+            "role": updated_user.role.value,
+            "message": "학생 회원정보가 성공적으로 업데이트되었습니다."
+        }
 
 
     async def update_teacher_info(self, payload: SocialLoginTeacherRequest, user_id: int, session: AsyncSession):
@@ -272,5 +275,8 @@ class OAuthService:
 
         updated_user = await self.oauth_repo.update_teacher(user_id, payload.dict(), session)
 
-        return {"message": "선생님 회원정보가 성공적으로 업데이트되었습니다."}
+        return {
+            "role": updated_user.role.value,
+            "message": "선생님 회원정보가 성공적으로 업데이트되었습니다."
+        }
 
