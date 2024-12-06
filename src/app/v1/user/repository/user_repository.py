@@ -330,6 +330,7 @@ class UserRepository:
                 .join(PostImage, PostImage.post_id == Post.id, isouter=True)
                 .join(Image, Image.id == PostImage.image_id, isouter=True)  # Image와 조인 추가
                 .where(Post.author_id == user_id)
+                .order_by(Post.updated_at.desc())
             )
             result = await session.execute(query)
             rows = result.fetchall()
@@ -351,14 +352,7 @@ class UserRepository:
         except Exception as e:
             logger.error(f"Error fetching posts for user ID {user_id}: {str(e)}")
             raise
-    @staticmethod
-    def validate_url(url: str):
-        try:
-            HttpUrl.validate(url)  # type: ignore
-            return True
-        except ValidationError:
-            logger.error(f"Invalid URL format: {url}")
-            return False
+
 
     async def get_students_profile(self, user_id: int, session: AsyncSession):
         query = (
