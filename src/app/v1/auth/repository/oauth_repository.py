@@ -91,57 +91,71 @@ class OAuthRepository:
         # return user
 
     async def update_student(self, user_id: int, student_data: dict, session: AsyncSession) -> User:
-        user = await self.get_user_with_info(user_id, session)
-        if not user:
-            raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
+        try:
+            user = await self.get_user_with_info(user_id, session)
+            if not user:
+                raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
 
-        if "nickname" in student_data:
-            if user.tag:
-                user.tag.nickname = student_data["nickname"]
+            if "nickname" in student_data:
+                if user.tag:
+                    user.tag.nickname = student_data["nickname"]
+                else:
+                    session.add(Tag(user_id=user.id, nickname=student_data["nickname"]))
+
+            if user.student:
+                student = user.student
             else:
-                session.add(Tag(user_id=user.id, nickname=student_data["nickname"]))
+                student = Student(user_id=user.id)
+                session.add(student)
 
-        if user.student:
-            student = user.student
-        else:
-            student = Student(user_id=user.id)
-            session.add(student)
+            for key, value in student_data.items():
+                if hasattr(student, key):
+                    setattr(student, key, value)
 
-        for key, value in student_data.items():
-            if hasattr(student, key):
-                setattr(student, key, value)
+            user.first_login = False
+            await session.commit()
+            return user
 
-        user.first_login = False
-        await session.commit()
-        return user
+        except IntegrityError as e:
+            await session.rollback()
+            raise HTTPException(status_code=400, detail="닉네임이 중복되었습니다.")
+        except Exception as e:
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
     async def update_teacher(self, user_id: int, teacher_data: dict, session: AsyncSession) -> User:
-        user = await self.get_user_with_info(user_id, session)
-        if not user:
-            raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
+        try:
+            user = await self.get_user_with_info(user_id, session)
+            if not user:
+                raise HTTPException(status_code=404, detail="유저를 찾을 수 없습니다.")
 
-        if "nickname" in teacher_data:
-            if user.tag:
-                user.tag.nickname = teacher_data["nickname"]
+            if "nickname" in teacher_data:
+                if user.tag:
+                    user.tag.nickname = teacher_data["nickname"]
+                else:
+                    session.add(Tag(user_id=user.id, nickname=teacher_data["nickname"]))
+
+            if user.teacher and user.teacher.organization:
+                organization = user.teacher.organization
             else:
-                session.add(Tag(user_id=user.id, nickname=teacher_data["nickname"]))
+                if not user.teacher:
+                    teacher = Teacher(user_id=user.id)
+                    session.add(teacher)
+                    user.teacher = teacher
 
-        if user.teacher and user.teacher.organization:
-            organization = user.teacher.organization
-        else:
-            if not user.teacher:
-                teacher = Teacher(user_id=user.id)
-                session.add(teacher)
-                user.teacher = teacher
+                organization = Organization(teacher=user.teacher)
+                session.add(organization)
 
-            organization = Organization(teacher=user.teacher)
-            session.add(organization)
+            organization.name = teacher_data.get("organization_name")
+            organization.type = teacher_data.get("organization_type")
+            organization.position = teacher_data.get("position")
 
-        organization.name = teacher_data.get("organization_name")
-        organization.type = teacher_data.get("organization_type")
-        organization.position = teacher_data.get("position")
-
-        user.first_login = False
-        await session.commit()
-        return user
-
+            user.first_login = False
+            await session.commit()
+            return user
+        except IntegrityError as e:
+            await session.rollback()
+            raise HTTPException(status_code=400, detail="닉네임이 중복되었습니다.")
+        except Exception as e:
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
