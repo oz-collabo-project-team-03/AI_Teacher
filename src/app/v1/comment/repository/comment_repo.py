@@ -2,11 +2,11 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from src.app.v1.user.entity.user import User
 from src.app.common.models.tag import Tag
 from src.app.v1.comment.entity.comment import Comment
 from src.app.v1.comment.entity.comment_tag import CommentTag
 from src.app.v1.post.entity.post import Post
+from src.app.v1.user.entity.user import User
 
 
 class CommentRepository:
@@ -60,8 +60,7 @@ class CommentRepository:
     async def get_user_info(self, session: AsyncSession, user_id: int) -> dict:
         from src.app.v1.user.entity.user import User
 
-        query = select(Tag.nickname, User.profile_image, User.external_id).join(User, Tag.user_id == User.id).where(
-            Tag.user_id == user_id)
+        query = select(Tag.nickname, User.profile_image, User.external_id).join(User, Tag.user_id == User.id).where(Tag.user_id == user_id)
         result = await session.execute(query)
         row = result.first()
         if row:
@@ -71,3 +70,29 @@ class CommentRepository:
                 "user_id": row.external_id,  # external_id 추가
             }
         return {"nickname": "Anonymous", "profile_image": None, "user_id": None}
+
+    async def increment_comment_count(self, session: AsyncSession, post_id: int, is_parent: bool):
+        """댓글 생성 시 comment_count 증가 (대댓글 제외)"""
+        if not is_parent:  # 대댓글은 카운트하지 않음
+            return
+
+        query = select(Post).where(Post.id == post_id)
+        result = await session.execute(query)
+        post = result.scalar_one_or_none()
+        if post:
+            post.comment_count += 1
+            session.add(post)
+            await session.flush()
+
+    async def decrement_comment_count(self, session: AsyncSession, post_id: int, is_parent: bool):
+        """댓글 삭제 시 comment_count 감소 (대댓글 제외)"""
+        if not is_parent:  # 대댓글은 카운트하지 않음
+            return
+
+        query = select(Post).where(Post.id == post_id)
+        result = await session.execute(query)
+        post = result.scalar_one_or_none()
+        if post and post.comment_count > 0:  # 음수 방지
+            post.comment_count -= 1
+            session.add(post)
+            await session.flush()
