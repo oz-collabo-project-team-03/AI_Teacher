@@ -107,7 +107,7 @@ class PostRepository:
 
             response = {
                 "nickname": user.tag.nickname if user.tag else None,
-                "user_id": teacher.id,
+                "user_id": user.id,
                 "profile_image": user.profile_image,
                 "career_aspiration": student.career_aspiration,
                 "interest": student.interest,
