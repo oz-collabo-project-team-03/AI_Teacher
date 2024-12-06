@@ -330,7 +330,7 @@ class UserRepository:
                 .join(PostImage, PostImage.post_id == Post.id, isouter=True)
                 .join(Image, Image.id == PostImage.image_id, isouter=True)  # Image와 조인 추가
                 .where(Post.author_id == user_id)
-                .order_by(Post.updated_at.desc())
+                .order_by(Post.created_at.desc())
             )
             result = await session.execute(query)
             rows = result.fetchall()
@@ -344,7 +344,7 @@ class UserRepository:
                         "images": [],
                     }
                 if image_path:
-                    posts[post.id]["images"].append(image_path)
+                    posts[post.id]["images"].insert(0, image_path)
 
             logger.info(f"Retrieved {len(posts)} posts for user ID {user_id}")
             return posts
