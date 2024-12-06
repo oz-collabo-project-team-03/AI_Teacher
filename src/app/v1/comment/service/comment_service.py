@@ -1,5 +1,6 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.app.v1.comment.entity.comment import Comment
 from src.app.v1.comment.repository.comment_repo import CommentRepository
 from src.app.v1.comment.schema.requestDto import CommentCreateRequest
@@ -19,7 +20,7 @@ class CommentService:
         return post_id
 
     async def create_comment_with_tags(
-            self, session: AsyncSession, post_id: int, author_id: int, payload: CommentCreateRequest
+        self, session: AsyncSession, post_id: int, author_id: int, payload: CommentCreateRequest
     ) -> CommentCreateResponse:
         """댓글 생성"""
         # 부모 댓글 유효성 검사
@@ -81,10 +82,7 @@ class CommentService:
         comments_with_tags = await self.comment_repository.get_comments_by_post_id(session, post_id)
 
         author_ids = {row.Comment.author_id for row in comments_with_tags}
-        user_info_map = {
-            author_id: await self.comment_repository.get_user_info(session, author_id)
-            for author_id in author_ids
-        }
+        user_info_map = {author_id: await self.comment_repository.get_user_info(session, author_id) for author_id in author_ids}
 
         parent_comments = [row for row in comments_with_tags if row.Comment.parent_comment_id is None]
         child_comments = [row for row in comments_with_tags if row.Comment.parent_comment_id is not None]
@@ -110,13 +108,13 @@ class CommentService:
         ]
 
     def _convert_to_response(
-            self,
-            comment: Comment,
-            tags: list[str],
-            post_external_id: str,
-            user_id: str,
-            author_nickname: str,
-            profile_image: str | None,
+        self,
+        comment: Comment,
+        tags: list[str],
+        post_external_id: str,
+        user_id: str,
+        author_nickname: str,
+        profile_image: str | None,
     ) -> CommentResponse:
         """댓글 데이터 변환"""
         return CommentResponse(

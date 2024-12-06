@@ -2,11 +2,11 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from src.app.v1.user.entity.user import User
 from src.app.common.models.tag import Tag
 from src.app.v1.comment.entity.comment import Comment
 from src.app.v1.comment.entity.comment_tag import CommentTag
 from src.app.v1.post.entity.post import Post
+from src.app.v1.user.entity.user import User
 
 
 class CommentRepository:
@@ -60,8 +60,7 @@ class CommentRepository:
     async def get_user_info(self, session: AsyncSession, user_id: int) -> dict:
         from src.app.v1.user.entity.user import User
 
-        query = select(Tag.nickname, User.profile_image, User.external_id).join(User, Tag.user_id == User.id).where(
-            Tag.user_id == user_id)
+        query = select(Tag.nickname, User.profile_image, User.external_id).join(User, Tag.user_id == User.id).where(Tag.user_id == user_id)
         result = await session.execute(query)
         row = result.first()
         if row:
@@ -97,4 +96,3 @@ class CommentRepository:
             post.comment_count -= 1
             session.add(post)
             await session.flush()
-
