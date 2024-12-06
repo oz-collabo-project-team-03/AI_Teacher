@@ -10,7 +10,7 @@ from src.app.common.utils.image import NCPStorageService  # type: ignore
 
 from src.app.v1.auth.repository.oauth_repository import OAuthRepository
 from src.app.v1.auth.schema.requestDto import SocialLoginStudentRequest, SocialLoginTeacherRequest, OAuthRequest
-from src.app.v1.auth.schema.responseDto import SocialLoginResponse, RoleResponse
+from src.app.v1.auth.schema.responseDto import RoleResponse
 from src.app.v1.auth.service.oauth_service import OAuthService
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.user.schema.requestDto import (

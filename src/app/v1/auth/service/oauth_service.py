@@ -213,6 +213,7 @@ class OAuthService:
 
         return {
             "id": saved_user.id,
+            "role": saved_user.role,
             "access_token": access_token,
             "refresh_token": refresh_token, # 테스트 용
             "token_type": "Bearer",
@@ -258,7 +259,7 @@ class OAuthService:
         updated_user = await self.oauth_repo.update_student(user_id, payload.dict(), session)
 
         return {
-            "role": updated_user.role.value,
+            "role":updated_user.role.value,
             "message": "학생 회원정보가 성공적으로 업데이트되었습니다."
         }
 
@@ -276,7 +277,7 @@ class OAuthService:
         updated_user = await self.oauth_repo.update_teacher(user_id, payload.dict(), session)
 
         return {
-            "role": updated_user.role.value,
+            "role":updated_user.role.value,
             "message": "선생님 회원정보가 성공적으로 업데이트되었습니다."
         }
 
