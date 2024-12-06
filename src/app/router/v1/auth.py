@@ -165,21 +165,22 @@ async def create_study_group(
         teacher_name=study_group.name,
     )
 
-
 # 로그인 엔드포인트 - 테스트
-@router.get("/login/{provider}")
-async def login(provider: str):
-    oauth_url = oauth_service.get_oauth_url(provider)
-    print(f"Generated OAuth URL: {oauth_url}")
-    return RedirectResponse(oauth_url)
+# @router.get("/login/{provider}")
+# async def login(provider: str):
+#     oauth_url = oauth_service.get_oauth_url(provider)
+#     print(f"Generated OAuth URL: {oauth_url}")
+#     return RedirectResponse(oauth_url)
 
-@router.get("/login/callback/{provider}")
+# Callback 엔드포인트
+@router.post("/login/callback/{provider}")
 async def social_login_callback(
         response: Response,
-        code: str,
+        body: OAuthRequest,
         provider: str = Path(...),
         session: AsyncSession = Depends(get_session),
 ):
+    code = body.code
 
     token_data = await oauth_service.get_access_token(provider, code)
     access_token = token_data.get("access_token")
@@ -188,24 +189,6 @@ async def social_login_callback(
     result = await oauth_service.login_social_user(saved_user, response)
 
     return result
-
-# Callback 엔드포인트
-# @router.post("/login/callback/{provider}")
-# async def social_login_callback(
-#         response: Response,
-#         body: OAuthRequest,
-#         provider: str = Path(...),
-#         session: AsyncSession = Depends(get_session),
-# ):
-#     code = body.code
-#
-#     token_data = await oauth_service.get_access_token(provider, code)
-#     access_token = token_data.get("access_token")
-#     user_info = await oauth_service.get_user_info(provider, access_token)
-#     saved_user = await oauth_service.save_user_info(provider, user_info, session)
-#     result = await oauth_service.login_social_user(saved_user, response)
-#
-#     return result
 
 
 @router.patch("/social/info/student", response_model=RoleResponse)
