@@ -21,7 +21,6 @@ class StudentRegisterRequest(BaseRegisterRequest):
     career_aspiration: str | None
     interests: str | None
 
-
 class TeacherRegisterRequest(BaseRegisterRequest):
     role: UserRole = UserRole.TEACHER
     email: str
