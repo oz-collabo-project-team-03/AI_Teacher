@@ -55,15 +55,19 @@ async def websocket(
                 print("당신은 선생이라 메시지를 보낼 수 없습니다.")
                 continue
 
-            message = await chat_service.create_message(room, user_id, user_type, data)
-            # help_checked가 True일 때 AI의 답변을 보내지 않도록 조건 추가
-            if room.help_checked and (user_type == UserRole.STUDENT or user_type == UserRole.TEACHER):
-                await manager.send_message(message)  # 선생과 학생 간의 대화 전송
-                logger.info(f"Sending message: {message}")
-                continue
+            # await manager.handle_message(room, user_id, user_type, data)
 
-            # AI의 답변 처리
-            await chat_service.process_message(manager, message, room, user_type)
+            await manager.handle_message(room, user_id, user_type, data)
+
+            # help_checked가 True일 때 AI의 답변을 보내지 않도록 조건 추가
+            # if room.help_checked and (user_type == UserRole.STUDENT or user_type == UserRole.TEACHER):
+            #     await manager.handle_message(room, user_id, user_type, data)
+            #     # await manager.send_message(message)  # 선생과 학생 간의 대화 전송
+            #     logger.info(f"Sending message: {message}")
+            #     continue
+            # # AI 대화
+            # logger.info(f"Sending message: {message}")
+            # await manager.send_message(message)
 
     except HTTPException as he:
         await websocket.close(code=4004)

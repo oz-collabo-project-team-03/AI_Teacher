@@ -1,5 +1,6 @@
 from bson import ObjectId
 from odmantic import Model, Field
+from datetime import datetime
 from src.app.common.utils.consts import MessageType
 
 
@@ -12,7 +13,7 @@ class Message(Model):
     message_type: MessageType
     content: str
     user_type: str
-    timestamp: str
+    timestamp: datetime
 
     model_config = {
         "collection": "chat",

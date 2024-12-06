@@ -293,15 +293,15 @@ class RoomRepository:
                     recent_messages = await mongo.find(Message, Message.room_id == room.id, sort=query.desc(Message.timestamp), limit=1)
                     if recent_messages:
                         message = recent_messages[0]
-                        date_object = datetime.strptime(message.timestamp, "%Y-%m-%d %H시%M분")
-                        formatted_date = date_object.strftime("%Y-%m-%d %H시%M분")
+                        # date_object = datetime.strptime(message.timestamp, "%Y-%m-%d %H시%M분")
+                        # formatted_date = date_object.strftime("%Y-%m-%d %H시%M분")
 
                         room_response = RoomListResponse(
                             room_id=room.id,
                             title=room.title,
                             help_checked=room.help_checked,
                             recent_message=message.content,
-                            recent_update=formatted_date,
+                            recent_update=message.timestamp,
                             user_id=user_id,
                         )
                     else:
@@ -456,8 +456,8 @@ class RoomRepository:
 
                     if recent_messages:
                         message = recent_messages[0]
-                        date_object = datetime.strptime(message.timestamp, "%Y-%m-%d %H시%M분")
-                        formatted_date = date_object.strftime("%Y-%m-%d %H시%M분")
+                        # date_object = datetime.strptime(message.timestamp, "%Y-%m-%d %H시%M분")
+                        # formatted_date = date_object.strftime("%Y-%m-%d %H시%M분")
 
                         room_response = RoomHelpResponse(
                             room_id=room.id,
@@ -465,7 +465,7 @@ class RoomRepository:
                             student_nickname=nickname,
                             help_checked=room.help_checked,
                             recent_message=message.content,
-                            recent_update=formatted_date,
+                            recent_update=message.timestamp,
                         )
                     else:
                         room_response = RoomHelpResponse(
