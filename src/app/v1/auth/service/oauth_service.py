@@ -28,6 +28,10 @@ from src.app.v1.user.entity.teacher import Teacher
 from src.app.v1.user.entity.user import User
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.auth.schema.requestDto import SocialLoginStudentRequest, SocialLoginTeacherRequest
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -153,7 +157,7 @@ class OAuthService:
                 )
 
             user_data = response.json()
-
+            logger.info(f"Fetched user data from {provider}: {user_data}")
         return self.map_user_info(provider, user_data)
 
     def map_user_info(self, provider: str, user_data: dict) -> dict:
@@ -227,6 +231,7 @@ class OAuthService:
         )
 
         if not user:
+
 
             user = User(
                 external_id=ulid(),
