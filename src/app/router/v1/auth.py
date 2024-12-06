@@ -10,7 +10,7 @@ from src.app.common.utils.image import NCPStorageService  # type: ignore
 
 from src.app.v1.auth.repository.oauth_repository import OAuthRepository
 from src.app.v1.auth.schema.requestDto import SocialLoginStudentRequest, SocialLoginTeacherRequest, OAuthRequest
-from src.app.v1.auth.schema.responseDto import SocialLoginResponse
+from src.app.v1.auth.schema.responseDto import SocialLoginResponse, RoleResponse
 from src.app.v1.auth.service.oauth_service import OAuthService
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.user.schema.requestDto import (
@@ -165,7 +165,6 @@ async def create_study_group(
         teacher_name=study_group.name,
     )
 
-
 # 로그인 엔드포인트 - 테스트
 # @router.get("/login/{provider}")
 # async def login(provider: str):
@@ -192,7 +191,7 @@ async def social_login_callback(
     return result
 
 
-@router.patch("/social/info/student", response_model=MessageResponse)
+@router.patch("/social/info/student", response_model=RoleResponse)
 async def additional_student_info(
     payload: SocialLoginStudentRequest,
     current_user: dict = Depends(get_current_user),
@@ -205,7 +204,7 @@ async def additional_student_info(
     return await oauth_service.update_student_info(payload=payload, user_id=user_id, session=session)
 
 
-@router.patch("/social/info/teacher", response_model=MessageResponse)
+@router.patch("/social/info/teacher", response_model=RoleResponse)
 async def additional_teacher_info(
     payload: SocialLoginTeacherRequest,
     current_user: dict = Depends(get_current_user),
