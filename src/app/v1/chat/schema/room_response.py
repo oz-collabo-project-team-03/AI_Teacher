@@ -25,7 +25,7 @@ class RoomListResponse(BaseModel):
     title: str
     help_checked: bool
     recent_message: str | None
-    recent_update: str | None
+    recent_update: datetime | None
     user_id: int
 
 
@@ -38,7 +38,7 @@ class PaginationResponse(BaseModel):
 class RoomMessageResponse(BaseModel):
     sender_id: int
     content: str
-    timestamp: str
+    timestamp: datetime
     message_type: MessageType
     user_type: str
 
@@ -114,4 +114,4 @@ class RoomHelpResponse(BaseModel):
     student_nickname: str | None
     help_checked: bool
     recent_message: str | None
-    recent_update: str | None
+    recent_update: datetime | None
