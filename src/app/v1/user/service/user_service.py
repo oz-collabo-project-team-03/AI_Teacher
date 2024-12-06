@@ -636,7 +636,11 @@ class UserService:
                 session.add(new_tag)
 
         if "profile_image" in update_data:
-            user.profile_image = update_data["profile_image"]
+            profile_key = update_data["profile_image"]
+            if not profile_key.startswith("studentIcon"):
+                raise HTTPException(status_code=400, detail="유효하지 않은 이미지입니다.")
+
+            user.profile_image = f"https://backendsam.kr.object.ncloudstorage.com/profile_image/{profile_key}.jpeg"
 
         if user.student:
             student = user.student
@@ -669,7 +673,11 @@ class UserService:
                 session.add(new_tag)
 
         if "profile_image" in update_data:
-            user.profile_image = update_data["profile_image"]
+            profile_key = update_data["profile_image"]
+            if not profile_key.startswith("teacherIcon"):
+                raise HTTPException(status_code=400, detail="유효하지 않은 이미지입니다.")
+
+            user.profile_image = f"https://backendsam.kr.object.ncloudstorage.com/profile_image/{profile_key}.jpeg"
 
         if user.teacher and user.teacher.organization:
             organization = user.teacher.organization

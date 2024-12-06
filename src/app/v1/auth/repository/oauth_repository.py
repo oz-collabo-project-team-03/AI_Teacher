@@ -2,6 +2,7 @@ import logging
 import pdb
 import re
 from datetime import datetime
+from uuid import uuid4
 
 from sqlalchemy.orm import joinedload
 from ulid import ulid  # type: ignore
@@ -54,7 +55,12 @@ class OAuthRepository:
         return str(ulid_value)
 
     @staticmethod
-    def format_phone_number(phone: str) -> str:
+    def format_phone_number(phone: str | None, provider: str = "default") -> str:
+        if not phone or phone.strip() == "":
+            ulid_suffix = str(uuid4().int)[:8]  # ULID의 일부를 사용해 유니크한 값 생성
+            provider_code = {"google": "99", "facebook": "88"}.get(provider, "00")
+            return f"010{provider_code}{ulid_suffix}"
+
         phone = phone.replace("-", "")
         if bool(re.match(r"^010\d{4}\d{4}$", phone)):
             return phone
