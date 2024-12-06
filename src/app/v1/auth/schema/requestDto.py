@@ -19,7 +19,7 @@ class StudentRegisterRequest(BaseRegisterRequest):
     school: str
     grade: int
     career_aspiration: str | None
-    interest: str | None
+    interests: str | None
 
 class TeacherRegisterRequest(BaseRegisterRequest):
     role: UserRole = UserRole.TEACHER
