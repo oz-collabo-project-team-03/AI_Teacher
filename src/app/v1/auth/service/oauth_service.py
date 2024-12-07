@@ -8,7 +8,7 @@ import requests  # type: ignore
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException
 from fastapi.responses import Response
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_session
 from ulid import ulid  # type: ignore
 
 from src.app.common.utils.consts import SocialProvider, UserRole
@@ -187,6 +187,7 @@ class OAuthService:
 
     async def login_social_user(self, saved_user: User, response: Response):
         # pdb.set_trace()
+
         external_id = saved_user.external_id
         jti = str(uuid.uuid4())
         access_token = create_access_token({"sub": saved_user.id, "jti": jti, "role": saved_user.role}, expires_delta=timedelta(minutes=45))

@@ -14,6 +14,7 @@ class TokenResponse(BaseModel):
     expires_in: int
     role: str
     first_login: bool
+    study_group: bool | None
     message: str
 
 

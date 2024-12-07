@@ -44,6 +44,7 @@ class SocialLoginResponse(BaseModel):
     token_type: str
     expires_in: int
     role: str | None
+    study_group: bool | None
     message: str
 
 class StudentRoleResponse(BaseModel):

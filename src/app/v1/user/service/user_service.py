@@ -42,6 +42,7 @@ from src.app.common.utils.verify_password import (
     validate_temp_password_complexity,
     verify_password,
 )
+from src.app.v1.auth.repository.oauth_repository import OAuthRepository
 from src.app.v1.user.entity.organization import Organization
 from src.app.v1.user.entity.student import Student
 from src.app.v1.user.entity.teacher import Teacher
@@ -71,6 +72,7 @@ class UserService:
     def __init__(self, user_repo: UserRepository, storage_service: NCPStorageService):
         self.user_repo = user_repo
         self.storage_service = storage_service
+
 
     @staticmethod
     def _validate_email_format(email: str) -> bool:
@@ -250,6 +252,13 @@ class UserService:
                 session.add(user)
                 await session.commit()
 
+            is_connected_to_group = None
+            if role == "student":
+                if not user.student or not user.student.id:
+                    raise ValueError("Student 객체가 사용자와 연결되지 않았습니다.")
+                is_connected_to_group = await self.user_repo.is_student_connected_to_group(
+                    user.student.id, session
+                )
             return {
                 "id": user.id,
                 "access_token": access_token,
@@ -258,6 +267,7 @@ class UserService:
                 "expires_in": 45 * 60,
                 "role": role,
                 "first_login": first_login,  # 학생인 경우에만 의미 있는 값
+                "study_group": is_connected_to_group,
                 "message": "로그인에 성공하였습니다.",
             }
         except HTTPException as e:
