@@ -1,10 +1,8 @@
 import asyncio
+import json
 import logging
 import os
-import json
 import sys
-import asyncio
-import logging
 from pathlib import Path
 
 # 프로젝트 루트 디렉토리를 sys.path에 추가
@@ -12,19 +10,28 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
-from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
-from dotenv import load_dotenv
 from contextlib import asynccontextmanager
-from src.app.common.utils.websocket_manager import manager
+
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+
+from src.app.common.utils.websocket_manager import manager
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
 # 여기부터 router 추가
-from src.app.router import auth_router, chat_router, comment_router, post_router, user_router, websocket_router
+from src.app.router import (
+    auth_router,
+    chat_router,
+    comment_router,
+    post_router,
+    user_router,
+    websocket_router,
+)
 
 load_dotenv()
 
@@ -39,6 +46,7 @@ async def lifespan(app: FastAPI):
     producer = AIOKafkaProducer(
         bootstrap_servers=KAFKA_SERVER,  # type: ignore
         # value_serializer=lambda x: json.dumps(x).encode("utf-8"),
+        acks="all",
     )
     await producer.start()  # type: ignore
 
@@ -48,8 +56,11 @@ async def lifespan(app: FastAPI):
         bootstrap_servers=KAFKA_SERVER,  # type: ignore
         # value_deserializer=lambda x: json.loads(x.decode("utf-8")),
         group_id=CONSUMER_GROUP,
-        auto_offset_reset="latest",
+        auto_offset_reset="earliest",
         enable_auto_commit=True,
+        session_timeout_ms=30000,  # 세션 타임아웃 증가
+        rebalance_timeout_ms=60000,  # 리밸런스 타임아웃 증가
+        heartbeat_interval_ms=10000,  # 하트비트 주기 설정
     )
     await consumer.start()
 
@@ -93,18 +104,11 @@ async def cors_debugging(request: Request, call_next):
 
 
 origins = [
-    "http://localhost:5173/",
     "http://localhost:5173",
-    "https://localhost:5173/",
     "https://localhost:5173",
-    "http://localhost:8000/",
     "http://localhost:8000",
-    "http://sam-test.kprolabs.space:8000/",
     "http://sam-test.kprolabs.space:8000",
-    "http://kong.kprolabs.space:8000/",
     "http://kong.kprolabs.space:8000",
-    "http://158.180.84.161:8000/",
-    "http://158.180.84.161:8000",
 ]
 
 app.add_middleware(

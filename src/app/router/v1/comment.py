@@ -25,7 +25,7 @@ async def create_comment(
         return await comment_service.create_comment_with_tags(
             session=session,
             post_id=actual_post_id,
-            author_id=current_user["user_id"],
+            author_id=current_user["user_id"],            
             payload=payload,
         )
     except ValueError as e:

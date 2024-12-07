@@ -1,8 +1,10 @@
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict
-from src.app.v1.chat.entity.room import Room
-from src.app.v1.chat.entity.message import Message
+
 from src.app.common.utils.consts import MessageType
+from src.app.v1.chat.entity.message import Message
+from src.app.v1.chat.entity.room import Room
 
 
 class RoomCreateResponse(BaseModel):
@@ -110,7 +112,7 @@ class TeacherStudentsResponse(BaseModel):
 
 class RoomHelpResponse(BaseModel):
     room_id: int
-    student_id: int
+    student_id: int | None
     student_nickname: str | None
     help_checked: bool
     recent_message: str | None

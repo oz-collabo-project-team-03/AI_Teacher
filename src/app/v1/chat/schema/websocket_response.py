@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class MessageResponse(BaseModel):
     room_id: int
     title: str

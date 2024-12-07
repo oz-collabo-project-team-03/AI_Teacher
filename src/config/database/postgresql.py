@@ -2,7 +2,12 @@ import os
 
 import sqlalchemy
 from dotenv import load_dotenv
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine, AsyncEngine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import declarative_base
 
 load_dotenv()
@@ -35,4 +40,3 @@ SessionLocal = async_sessionmaker(
 )
 
 Base = declarative_base()
-

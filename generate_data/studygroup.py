@@ -1,9 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from src.app.v1.user.entity.teacher import Teacher
 from src.app.v1.user.entity.student import Student
 from src.app.v1.user.entity.study_group import StudyGroup
+from src.app.v1.user.entity.teacher import Teacher
 
 
 async def group_students_with_teachers(session: AsyncSession):
@@ -35,10 +35,7 @@ async def group_students_with_teachers(session: AsyncSession):
                 break
 
             # StudyGroup 객체 생성
-            study_group = StudyGroup(
-                student_id=student.id,
-                teacher_id=teachers[teacher_index].id
-            )
+            study_group = StudyGroup(student_id=student.id, teacher_id=teachers[teacher_index].id)
             session.add(study_group)
 
         # 변경 사항 커밋

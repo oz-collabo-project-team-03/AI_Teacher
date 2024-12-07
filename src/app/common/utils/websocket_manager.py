@@ -1,18 +1,19 @@
-import logging
-import os
 import asyncio
 import json
-from dotenv import load_dotenv
-from sqlalchemy.future import select
+import logging
+import os
+from openai import AsyncOpenAI
 from datetime import datetime
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+from dotenv import load_dotenv
+from fastapi import WebSocket
+from sqlalchemy.future import select
+from typing import Any
 from src.app.common.utils.consts import UserRole
-from fastapi import WebSocket, HTTPException
-from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
-from src.app.v1.chat.repository.room_repository import RoomRepository
-from src.config.database.postgresql import SessionLocal
-from src.app.v1.chat.entity.room import Room
 from src.app.v1.chat.entity.message import Message
+from src.app.v1.chat.entity.room import Room
 from src.config.database.mongo import MongoDB
+from src.config.database.postgresql import SessionLocal
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,6 +30,8 @@ class ConnectionManager:
         self.active_connections: dict[int, dict[int, WebSocket]] = {}  # room_id: {user_id: websocket}
         self.mongo = mongo
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        self.client = AsyncOpenAI(api_key=self.openai_api_key)
+        self.system_user_id = 0
         self.ai_user_id = 0
         self.ai_welcome_message = "AI 선생님과의 대화가 시작되었습니다. 궁금한 점을 물어보세요!"
         self.producer: AIOKafkaProducer | None = None
@@ -37,10 +40,20 @@ class ConnectionManager:
         self._consumer_task = None
         self._running = False
 
+        # 시스템 메시지 정의
+        self.system_messages = {
+            "ai_welcome": "AI 선생님과의 대화가 시작되었습니다. 궁금한 점을 물어보세요!",
+            "teacher_welcome": "선생님과의 대화가 시작됩니다.",
+            "ai_goodbye": "AI 선생님과의 대화가 종료되었습니다.",
+            "teacher_goodbye": "선생님과의 대화가 종료되었습니다.",
+            "ai_start_subject": "보고서 작성하는 게 너무 힘들지?^^ 도와줘?",
+            "ai_start_menu": "시작할 메뉴를 선택해줘",
+        }
+
     async def initialize(self, producer: AIOKafkaProducer, consumer: AIOKafkaConsumer):
         """Initialize the Kafka producer and consumer"""
         self.producer = producer
-        self.consumer = consumer  # 소비자 초기화
+        self.consumer = consumer
         self._running = True
         self._consumer_task = asyncio.create_task(self.consume_messages())
         logger.info("Kafka producer and consumer initialized")
@@ -55,28 +68,78 @@ class ConnectionManager:
             except asyncio.CancelledError:
                 pass
 
-    async def connect(self, websocket: WebSocket, room_id: int, user_id: int, user_type: UserRole):
+    async def create_message(self, room: Room, user_id: int, user_type: str, content: str) -> dict:
+        message = {
+            "room_id": room.id,
+            "title": room.title,
+            "sender_id": user_id,
+            "content": content,
+            "message_type": "text",
+            "user_type": user_type,
+            "timestamp": datetime.now().isoformat(),
+        }
+        return message
+
+    async def send_system_message(self, room_id: int, message_type: str):
+        now = datetime.now()
+        message = {
+            "room_id": room_id,
+            "sender_id": self.ai_user_id,
+            "content": self.system_messages.get(message_type, ""),
+            "message_type": "text",
+            "user_type": "system",
+            "timestamp": now.strftime("%Y-%m-%d %H시%M분"),
+        }
+        await self.send_message(message)
+
+    async def handle_help_check_update(self, room_id: int, help_checked: bool):
+        # 도움 요청 상태 변경에 따른 시스템 메시지 전송
+        if help_checked:
+            await self.send_system_message(room_id, "teacher_welcome")
+        else:
+            await self.send_system_message(room_id, "ai_welcome")
+
+    async def connect(self, websocket: WebSocket, room: Room, user_id: int, user_type: UserRole):
         await websocket.accept()
 
-        if room_id not in self.active_connections:
-            self.active_connections[room_id] = {}
+        if room.id not in self.active_connections:
+            self.active_connections[room.id] = {}
 
-        room = await RoomRepository.room_exists(room_id)
-        if not room:
-            raise HTTPException(status_code=404, detail="Room not found")
+        self.active_connections[room.id][user_id] = websocket
 
-        self.active_connections[room_id][user_id] = websocket
-
-        if user_type == UserRole.STUDENT and not self.active_connections[room_id].get(user_id):
+        if user_type == UserRole.STUDENT:
             welcome_message = {
-                "room_id": room_id,
-                "sender_id": os.getenv("AI_USER_ID"),
-                "content": self.ai_welcome_message,
+                "room_id": room.id,
+                "title": room.title,
+                "sender_id": self.system_user_id,
+                "content": self.system_messages["ai_welcome"],
+                "message_type": "text",
+                "user_type": "system",
+                "timestamp": datetime.now().isoformat(),
+            }
+            ai_start_message = {
+                "room_id": room.id,
+                "title": room.title,
+                "sender_id": self.ai_user_id,
+                "content": self.system_messages["ai_start_subject"],
+                "message_type": "text",
+                "user_type": "system",
+                "timestamp": datetime.now().isoformat(),
+            }
+            ai_menu_message = {
+                "room_id": room.id,
+                "title": room.title,
+                "sender_id": self.ai_user_id,
+                "content": self.system_messages["ai_start_menu"],
+                "message_type": "text",
+                "user_type": "system",
                 "timestamp": datetime.now().isoformat(),
             }
             await self.send_message(welcome_message)
+            await self.send_message(ai_start_message)
+            await self.send_message(ai_menu_message)
 
-    async def handle_message(self, room: Room, user_id: int, user_type: UserRole, content: str):
+    async def handle_message(self, room: Room, user_id: int, user_type: str, content: str):
 
         # 선생과 학생 대화
         message = {
@@ -85,25 +148,15 @@ class ConnectionManager:
             "sender_id": user_id,
             "content": content,
             "message_type": "text",
-            "user_type": user_type.value,
+            "user_type": user_type,
             "timestamp": datetime.now().isoformat(),
         }
         await self.send_message(message)
 
         if not room.help_checked and user_type == UserRole.STUDENT:
-            # ai_response = await self.ai_chat(content)
-            ai_message = {
-                "room_id": room.id,
-                "title": room.title,
-                "sender_id": self.ai_user_id,
-                "content": "AI_Message",
-                "message_type": "text",
-                "user_type": "ai",
-                "timestamp": datetime.now().isoformat(),
-            }
-            await self.send_message(ai_message)
-
-        # await self.send_message(message)
+            await self.ai_chat(room, content)
+            # ai_response = await self.create_message(room, self.ai_user_id, "ai", "AI_Message")
+            # await self.send_message(ai_response)
 
     async def disconnect(self, room_id: int, user_id: int):
         if room_id in self.active_connections:
@@ -135,37 +188,91 @@ class ConnectionManager:
                 logger.error(f"Error checking message permission for Room ID {room_id}: {str(e)}")
                 return False
 
-    async def ai_chat(self, message: str):
+    async def ai_chat(self, room: Room, content: str) -> Any:
         try:
-            print("완성되지 않은 AI")
-            # response = await openai.chat.completions.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": message}])
-            # return response.choices[0].message.content
-        except Exception as e:
-            print(f"OpenAI API Error: {e}")
-            return "죄송합니다. 현재 AI 응답을 생성할 수 없습니다."
+            stream = await self.client.chat.completions.create(
+                model="gpt-4-turbo",
+                messages=[
+                    # {"role": "system", "content": "너는 수행평가를 돕는 친절한 AI 선생님이야."},
+                    {"role": "user", "content": content},  # 사용자 메시지 추가
+                ],
+                stream=True,
+            )
 
-    # async def send_message(self, message: dict):
-    #     """Kafka에 메시지를 전송하고 웹소켓으로 브로드캐스트합니다."""
-    #     if self.producer:
-    #         try:
-    #             # Ensure message is JSON serializable
-    #             json_message = json.loads(json.dumps(message))
-    #             await self.producer.send_and_wait(self.chat_topic, value=json_message)
-    #             logger.info(f"Message sent to Kafka: {message}")
-    #         except Exception as e:
-    #             logger.error(f"Failed to send message to Kafka: {e}")
-    #     else:
-    #         logger.warning("Kafka producer not initialized")
+            buffer = ""
+            collected_message = ""
+
+            # 문장 끝을 나타내는 구두점들
+            sentence_endings = [".", "!", "?", "\n"]
+            BUFFER_SIZE = 50  # 또는 원하는 글자 수로 설정
+
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                    chunk_content = chunk.choices[0].delta.content
+                    buffer += chunk_content
+                    collected_message += chunk_content
+
+                    # 버퍼가 BUFFER_SIZE를 넘거나 문장이 완성되었을 때 전송
+                    should_send = len(buffer) >= BUFFER_SIZE
+                    ends_with_punctuation = any(buffer.rstrip().endswith(end) for end in sentence_endings)
+
+                    if should_send or ends_with_punctuation:
+                        if buffer.strip():
+                            message = {
+                                "room_id": room.id,
+                                "title": room.title,
+                                "sender_id": self.ai_user_id,
+                                "content": buffer,
+                                "message_type": "text",
+                                "user_type": "ai",
+                                "timestamp": datetime.now().isoformat(),
+                            }
+                            await self.send_message(message)
+                        buffer = ""  # 버퍼 초기화
+
+            # 남은 버퍼가 있다면 마지막으로 전송
+            if buffer.strip():
+                message = {
+                    "room_id": room.id,
+                    "title": room.title,
+                    "sender_id": self.ai_user_id,
+                    "content": buffer,
+                    "message_type": "text",
+                    "user_type": "ai",
+                    "timestamp": datetime.now().isoformat(),
+                }
+                await self.send_message(message)
+
+        except Exception as e:
+            logger.error(f"OpenAI API Error: {e}")
+            error_message = {
+                "room_id": room.id,
+                "title": room.title,
+                "sender_id": self.ai_user_id,
+                "content": "죄송합니다. 현재 AI 응답을 생성할 수 없습니다.",
+                "message_type": "text",
+                "user_type": "ai",
+                "timestamp": datetime.now().isoformat(),
+            }
+            await self.send_message(error_message)
 
     async def send_message(self, message: dict):
         """Kafka에 메시지를 전송하고 웹소켓으로 브로드캐스트합니다."""
+        if not message:  # None이거나 빈 딕셔너리인 경우 처리
+            logger.error(f"{message}")
+            logger.error("Received empty message")
+            return
         if self.producer:
             try:
-                # 메시지 전송 전 로깅
-                logger.info(f"Sending message to Kafka: {message}")
+                # room_id를 파티션 키로 설정하여 순서 보장
+                room_id = message.get("room_id")
+                if room_id is None:
+                    raise ValueError("Message must include 'room_id' to ensure partition consistency")
 
-                await self.producer.send_and_wait(self.chat_topic, json.dumps(message).encode("utf-8"))
-                # await self.producer.send_and_wait(self.chat_topic, message)
+                # 메시지 전송 (room_id를 key로 설정)
+                await self.producer.send_and_wait(
+                    topic=self.chat_topic, key=str(room_id).encode("utf-8"), value=json.dumps(message).encode("utf-8")  # room_id를 파티션 키로 사용
+                )
                 logger.info("Message sent successfully")
             except Exception as e:
                 logger.error(f"Failed to send message to Kafka: {e}")
@@ -188,37 +295,6 @@ class ConnectionManager:
                     await websocket.send_json(message)
                 except Exception as e:
                     logger.error(f"Failed to send message to websocket: {e}")
-
-    # async def consume_messages(self):
-    #     """Kafka에서 메시지를 소비하여 웹소켓으로 브로드캐스트합니다."""
-    #     if not self.consumer:
-    #         logger.error("Kafka consumer is not initialized.")
-    #         return
-    #     try:
-    #         while self._running:
-    #             try:
-    #                 async for message in self.consumer:
-    #                     if not self._running:
-    #                         break
-
-    #                     if message and message.value:
-    #                         try:
-    #                             await self.broadcast_kafka_message(message.value)
-    #                         except Exception as e:
-    #                             logger.error(f"Error processing message: {e}")
-    #                     else:
-    #                         logger.warning("Received None or invalid message from Kafka")
-    #             except asyncio.CancelledError:
-    #                 logger.info("Consumer task cancelled")
-    #                 break
-    #             except Exception as e:
-    #                 logger.error(f"Error in consumer loop: {e}")
-    #                 await asyncio.sleep(1)  # Prevent tight loop on error
-
-    #     except Exception as e:
-    #         logger.error(f"Fatal error in consume_messages: {e}")
-    #     finally:
-    #         logger.info("Consumer task finished")
 
     async def consume_messages(self):
         """Kafka에서 메시지를 소비하여 웹소켓으로 브로드캐스트합니다."""

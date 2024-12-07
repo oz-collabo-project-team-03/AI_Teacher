@@ -1,12 +1,16 @@
 import logging
-from fastapi import APIRouter, WebSocket, HTTPException, Depends, WebSocketException, status
 
-from src.app.v1.chat.repository.room_repository import RoomRepository
-from src.app.v1.chat.repository.chat_repository import ChatRepository
-from src.app.v1.chat.service.chat import ChatService
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    WebSocket,
+    WebSocketException,
+    status,
+)
 from src.app.common.utils.websocket_manager import manager
-from src.app.common.utils.consts import UserRole
-from src.app.common.utils.security import get_current_user_ws
+from src.app.v1.chat.repository.chat_repository import ChatRepository
+from src.app.v1.chat.repository.room_repository import RoomRepository
+from src.app.v1.chat.service.chat import ChatService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -46,16 +50,14 @@ async def websocket(
             await websocket.close(code=4004)
             return
 
-        await manager.connect(websocket, room_id, user_id, user_type)
+        await manager.connect(websocket, room, user_id, user_type)
 
         while True:
             data = await websocket.receive_text()
 
             if not await manager.can_send_message(room_id, user_type):
-                print("당신은 선생이라 메시지를 보낼 수 없습니다.")
+                logger.warning("당신은 선생이라 메시지를 보낼 수 없습니다.")
                 continue
-
-            # await manager.handle_message(room, user_id, user_type, data)
 
             await manager.handle_message(room, user_id, user_type, data)
 

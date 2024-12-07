@@ -2,14 +2,16 @@ import asyncio
 import random
 import string
 from datetime import datetime
+
 from argon2 import PasswordHasher
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
+
 from src.app.common.models.tag import Tag
-from src.app.v1.user.entity.user import User
 from src.app.v1.user.entity.student import Student
+from src.app.v1.user.entity.user import User
 from src.config.database import SessionLocal
-from src.config.database.postgresql import engine, Base
+from src.config.database.postgresql import Base, engine
 
 # 순서 기반 인덱스
 email_counter = 0

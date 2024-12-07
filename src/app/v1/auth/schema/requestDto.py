@@ -111,9 +111,11 @@ class EmailVerifyRequest(BaseModel):
     encrypted_code: str
     expiry_time: float
 
+
 # class SocialLoginBaseRegisterRequest(BaseModel):
 #     email: EmailStr
 #     phone: str
+
 
 class SocialLoginStudentRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -125,6 +127,7 @@ class SocialLoginStudentRequest(BaseModel):
     career_aspiration: str | None
     interests: str | None
 
+
 class SocialLoginTeacherRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     role: UserRole = UserRole.TEACHER
@@ -133,6 +136,7 @@ class SocialLoginTeacherRequest(BaseModel):
     organization_name: str
     organization_type: str
     position: str
+
 
 class OAuthRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)

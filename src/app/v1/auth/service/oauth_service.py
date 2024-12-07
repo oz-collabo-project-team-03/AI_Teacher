@@ -6,17 +6,24 @@ import httpx
 import jwt
 import requests  # type: ignore
 from dotenv import load_dotenv
-from fastapi import HTTPException, Depends
+from fastapi import Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from ulid import ulid  # type: ignore
 
-from src.app.common.utils.consts import UserRole
-from src.app.common.utils.redis_utils import save_to_redis, get_redis_key_refresh_token, get_redis_key_jti
+from src.app.common.utils.consts import SocialProvider, UserRole
+from src.app.common.utils.dependency import get_session
+from src.app.common.utils.redis_utils import save_to_redis, get_redis_key_refresh_token, get_redis_key_jti, get_from_redis
 from src.app.common.utils.security import create_refresh_token, create_access_token, verify_access_token
 from src.app.common.utils.verify_password import generate_random_social_password
 from src.app.v1.auth.repository.oauth_repository import OAuthRepository
-
+from src.app.v1.auth.schema.requestDto import (
+    SocialLoginStudentRequest,
+    SocialLoginTeacherRequest,
+)
+from src.app.v1.user.entity.organization import Organization
+from src.app.v1.user.entity.student import Student
+from src.app.v1.user.entity.teacher import Teacher
 from src.app.v1.user.entity.user import User
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.auth.schema.requestDto import SocialLoginStudentRequest, SocialLoginTeacherRequest
@@ -182,14 +189,10 @@ class OAuthService:
         # pdb.set_trace()
         external_id = saved_user.external_id
         jti = str(uuid.uuid4())
-        access_token = create_access_token(
-            {"sub": saved_user.id, "jti": jti, "role": saved_user.role}, expires_delta=timedelta(minutes=45)
-        )
+        access_token = create_access_token({"sub": saved_user.id, "jti": jti, "role": saved_user.role}, expires_delta=timedelta(minutes=45))
         refresh_token = create_refresh_token({"sub": saved_user.id}, expires_delta=timedelta(days=7))
         await save_to_redis(get_redis_key_jti(jti), "used", 45 * 60)
         await save_to_redis(get_redis_key_refresh_token(saved_user.id), refresh_token, expiry=7 * 24 * 3600)
-
-
 
         response.set_cookie(
             key="refresh_token",
@@ -207,7 +210,7 @@ class OAuthService:
             "id": saved_user.id,
             "role": saved_user.role,
             "access_token": access_token,
-            "refresh_token": refresh_token, # 테스트 용
+            "refresh_token": refresh_token,  # 테스트 용
             "token_type": "Bearer",
             "expires_in": 45 * 60,
             "first_login": first_login,
@@ -228,7 +231,7 @@ class OAuthService:
             formatted_phone = self.oauth_repo.format_phone_number(phone, provider)
 
             user = User(
-                external_id=ulid(),
+                external_id=ulid(),  # type: ignore
                 email=user_info.get("email"),
                 phone=formatted_phone,
                 password=generate_random_social_password(),
@@ -250,16 +253,15 @@ class OAuthService:
 
         updated_user = await self.oauth_repo.update_student(user_id, payload.dict(), session)
 
-        #선생님과 연결 여부 확인
+        # 선생님과 연결 여부 확인
         is_connected_to_teacher = await self.oauth_repo.is_student_connected_to_teacher(updated_user.student.id, session)
 
         return {
-            "role":updated_user.role.value,
-            "first_login":updated_user.first_login,
+            "role": updated_user.role.value,
+            "first_login": updated_user.first_login,
             "study_group": is_connected_to_teacher,
-            "message": "학생 회원정보가 성공적으로 업데이트되었습니다."
+            "message": "학생 회원정보가 성공적으로 업데이트되었습니다.",
         }
-
 
     async def update_teacher_info(self, payload: SocialLoginTeacherRequest, user_id: int, session: AsyncSession):
         user = await self.oauth_repo.get_user_with_info(user_id, session)
@@ -274,8 +276,7 @@ class OAuthService:
         updated_user = await self.oauth_repo.update_teacher(user_id, payload.dict(), session)
 
         return {
-            "role":updated_user.role.value,
-            "first_login":updated_user.first_login,
-            "message": "선생님 회원정보가 성공적으로 업데이트되었습니다."
+            "role": updated_user.role.value,
+            "first_login": updated_user.first_login,
+            "message": "선생님 회원정보가 성공적으로 업데이트되었습니다.",
         }
-

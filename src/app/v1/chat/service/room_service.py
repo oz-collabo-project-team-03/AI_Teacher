@@ -1,12 +1,13 @@
 from fastapi import HTTPException
 from odmantic import AIOEngine
+
 from src.app.v1.chat.repository.room_repository import RoomRepository
 from src.app.v1.chat.schema.room_request import RoomCreateRequest
 from src.app.v1.chat.schema.room_response import (
     RoomCreateResponse,
-    RoomListResponse,
     RoomHelpResponse,
     RoomHelpUpdateResponse,
+    RoomListResponse,
     RoomMessagesListResponse,
     StudentInfo,
     TeacherInfo,
@@ -107,7 +108,6 @@ class RoomService:
 
     # 관리 학생 목록 조회
 
-
     async def get_students(self, user_id: int):
         # 1. Check if the user is a teacher
         teacher_id = await self.room_repository.user_exists(user_id)
@@ -139,40 +139,6 @@ class RoomService:
 
         # 5. Return the response model
         return TeacherStudentsResponse(teacher=teacher_info, students=students_list)
-
-    # async def get_students(self, user_id: int):
-    #     teacher_id = await self.room_repository.user_exists(user_id)
-    #     if not teacher_id:
-    #         raise HTTPException(status_code=404, detail="선생 id를 찾을 수 없습니다.")
-    #     try:
-    #         # 학생 및 방 정보 가져오기
-    #         students_result = await self.room_repository.get_students_by_teacher(teacher_id)
-
-    #         # 교사 정보 가져오기
-    #         teacher_result = await self.room_repository.fetch_teacher_info(teacher_id)
-
-    #         # 결과 정리
-    #         rooms_info = []
-    #         for row in students_result:
-    #             room_info = RoomInfo(
-    #                 room_id=row.room_id,
-    #                 student_id=row.student_id,
-    #                 student_nickname=row.student_nickname,
-    #                 student_image_url=row.student_image_url or "default_student_image.jpg",
-    #                 help_checked=row.help_checked,
-    #             )
-    #             rooms_info.append(room_info)
-
-    #         teacher_info = TeacherInfo(
-    #             teacher_id=teacher_id,
-    #             teacher_image_url=(teacher_result.teacher_image_url if teacher_result else None) or "default_teacher_image.jpg",
-    #             teacher_nickname=teacher_result.teacher_nickname if teacher_result else "선생님",
-    #         )
-
-    #         return TeacherStudentResponse(teacher=teacher_info, rooms=rooms_info)
-
-    #     except Exception as e:
-    #         raise HTTPException(status_code=500, detail=str(e))
 
     # 헬프 목록 조회
     async def room_help_list(self, mongo: AIOEngine, user_id: int) -> list[RoomHelpResponse] | None:

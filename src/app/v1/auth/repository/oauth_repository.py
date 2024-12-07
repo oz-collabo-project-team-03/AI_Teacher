@@ -6,12 +6,12 @@ from datetime import datetime
 import random
 from uuid import uuid4
 
-from sqlalchemy.orm import joinedload
-from ulid import ulid  # type: ignore
 from fastapi import HTTPException
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
+from ulid import ulid  # type: ignore
 
 from src.app.common.models.tag import Tag
 from src.app.common.utils.consts import SocialProvider, UserRole
@@ -27,9 +27,7 @@ logging.basicConfig(level=logging.INFO)
 
 class OAuthRepository:
     @staticmethod
-    async def get_user_by_external_id(
-        session: AsyncSession, external_id: str, social_provider: SocialProvider
-    ) -> User | None:
+    async def get_user_by_external_id(session: AsyncSession, external_id: str, social_provider: SocialProvider) -> User | None:
         query = select(User).where(
             and_(
                 User.external_id == external_id,
