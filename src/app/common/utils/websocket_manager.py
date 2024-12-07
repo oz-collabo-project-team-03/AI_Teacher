@@ -155,8 +155,9 @@ class ConnectionManager:
         }
         await self.send_message(message)
 
-        if not room.help_checked and user_type == UserRole.STUDENT:
+        if not room.help_checked and user_type == "student":
             await self.ai_chat(room, content)
+            
             # ai_response = await self.create_message(room, self.ai_user_id, "ai", "AI_Message")
             # await self.send_message(ai_response)
 
