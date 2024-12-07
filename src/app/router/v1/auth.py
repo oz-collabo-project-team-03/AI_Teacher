@@ -165,6 +165,7 @@ async def create_study_group(
         teacher_name=study_group.name,
     )
 
+
 # 로그인 엔드포인트 - 테스트
 # @router.get("/login/{provider}")
 # async def login(provider: str):
