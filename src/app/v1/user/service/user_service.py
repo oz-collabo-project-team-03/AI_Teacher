@@ -158,7 +158,7 @@ class UserService:
             validation_result = validate_password_complexity(payload.password)
 
             if not validation_result:
-                raise HTTPException(status_code=400, detail="비밀번호는 영문(대소, 숫자, 특수문자 10~20자 이내 여야 합니다.")
+                raise HTTPException(status_code=400, detail="비밀번호는 영문(대소, 숫자, 특수문자(!@#$%^&*)포함) 10~20자 이내 여야 합니다.")
 
             hashed_password = hash_password(payload.password)
 

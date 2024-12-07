@@ -14,7 +14,7 @@ import re
 
 
 def validate_password_complexity(password: str) -> bool:
-    return bool(re.match(r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{10,20}$", password))
+    return bool(re.match(r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*])[a-zA-Z\d!@#$%^&*]{10,20}$", password))
 
 
 def generate_temp_password(length: int = 16) -> str:
@@ -24,7 +24,7 @@ def generate_temp_password(length: int = 16) -> str:
 
 
 def validate_temp_password_complexity(password: str) -> bool:
-    return bool(re.match(r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{10,20}$", password))
+    return bool(re.match(r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*])[a-zA-Z\d!@#$%^&*]{10,20}$", password))
 
 
 def hash_password(password: str) -> str:
