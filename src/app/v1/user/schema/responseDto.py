@@ -72,6 +72,8 @@ class StudentProfileResponse(CommonProfileResponse):
     career_aspiration: str | None
     interest: str | None
     description: str | None
+    study_group: bool | None
+    first_login: bool
     posts: List[PostResponse]
 
 
@@ -79,6 +81,7 @@ class TeacherProfileResponse(CommonProfileResponse):
     organization_name: str
     organization_type: str
     position: str
+    first_login: bool
     posts: List[PostResponse]
 
 
