@@ -58,11 +58,7 @@ class CommentRepository:
         return result.scalars().all()
 
     async def get_user_info(self, session: AsyncSession, user_id: int) -> dict:
-        query = (
-            select(Tag.nickname, User.id, User.profile_image)
-            .join(Tag, Tag.user_id == User.id)
-            .where(User.id == user_id)
-        )
+        query = select(Tag.nickname, User.id, User.profile_image).join(Tag, Tag.user_id == User.id).where(User.id == user_id)
         result = await session.execute(query)
         row = result.first()
         if row:

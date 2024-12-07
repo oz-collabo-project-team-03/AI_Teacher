@@ -82,10 +82,7 @@ class CommentService:
         comments_with_tags = await self.comment_repository.get_comments_by_post_id(session, post_id)
 
         author_ids = {row.Comment.author_id for row in comments_with_tags}
-        user_info_map = {
-            author_id: await self.comment_repository.get_user_info(session, author_id)
-            for author_id in author_ids
-        }
+        user_info_map = {author_id: await self.comment_repository.get_user_info(session, author_id) for author_id in author_ids}
 
         parent_comments = [row for row in comments_with_tags if row.Comment.parent_comment_id is None]
         child_comments = [row for row in comments_with_tags if row.Comment.parent_comment_id is not None]
