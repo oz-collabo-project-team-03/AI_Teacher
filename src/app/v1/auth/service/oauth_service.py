@@ -260,6 +260,7 @@ class OAuthService:
 
         return {
             "role":updated_user.role.value,
+            "first_login":updated_user.first_login,
             "message": "학생 회원정보가 성공적으로 업데이트되었습니다."
         }
 
@@ -278,6 +279,7 @@ class OAuthService:
 
         return {
             "role":updated_user.role.value,
+            "first_login":updated_user.first_login,
             "message": "선생님 회원정보가 성공적으로 업데이트되었습니다."
         }
 

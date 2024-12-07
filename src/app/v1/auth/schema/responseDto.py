@@ -49,4 +49,5 @@ class SocialLoginResponse(BaseModel):
 class RoleResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     role: str
+    first_login: bool
     message: str
