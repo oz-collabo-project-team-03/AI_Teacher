@@ -171,7 +171,7 @@ class RoomRepository:
                 "user_type": "ai",
                 "timestamp": datetime.now().isoformat(),
             }
-            messages = [welcome_message, ai_start_message, ai_menu_message]
+            messages = [ai_menu_message, ai_start_message, welcome_message]
             for i in messages:
                 message_model = Message(**i)
 
