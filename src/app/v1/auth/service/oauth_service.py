@@ -185,7 +185,7 @@ class OAuthService:
         except KeyError as e:
             raise HTTPException(status_code=500, detail=f"사용자 데이터 구문 분석 오류{e}")
 
-    async def login_social_user(self, saved_user: User, response: Response, session: AsyncSession):
+    async def login_social_user(self, saved_user: User, response: Response):
         # pdb.set_trace()
 
         external_id = saved_user.external_id

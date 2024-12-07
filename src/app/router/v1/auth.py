@@ -196,7 +196,7 @@ async def social_login_callback(
     access_token = token_data.get("access_token")
     user_info = await oauth_service.get_user_info(provider, access_token)
     saved_user = await oauth_service.save_user_info(provider, user_info, session)
-    result = await oauth_service.login_social_user(saved_user, response, session)
+    result = await oauth_service.login_social_user(saved_user, response)
 
     return result
 
