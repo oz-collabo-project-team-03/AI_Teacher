@@ -58,18 +58,20 @@ class CommentRepository:
         return result.scalars().all()
 
     async def get_user_info(self, session: AsyncSession, user_id: int) -> dict:
-        from src.app.v1.user.entity.user import User
-
-        query = select(Tag.nickname, User.profile_image, User.external_id).join(User, Tag.user_id == User.id).where(Tag.user_id == user_id)
+        query = (
+            select(Tag.nickname, User.id, User.profile_image)
+            .join(Tag, Tag.user_id == User.id)
+            .where(User.id == user_id)
+        )
         result = await session.execute(query)
         row = result.first()
         if row:
             return {
-                "nickname": row.nickname,
+                "id": row.id,  # User의 실제 id 반환
+                "nickname": row.nickname,  # Tag 모델의 nickname 반환
                 "profile_image": row.profile_image,
-                "user_id": row.external_id,  # external_id 추가
             }
-        return {"nickname": "Anonymous", "profile_image": None, "user_id": None}
+        return {"id": None, "nickname": "Anonymous", "profile_image": None}
 
     async def increment_comment_count(self, session: AsyncSession, post_id: int, is_parent: bool):
         """댓글 생성 시 comment_count 증가 (대댓글 제외)"""

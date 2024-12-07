@@ -67,8 +67,8 @@ class CommentService:
         # 응답 생성
         return CommentCreateResponse(
             comment_id=comment.id,
-            post_id=post_external_id,  # `external_id` 사용
-            user_id=user_info["user_id"],
+            post_id=post_external_id,
+            user_id=user_info["id"],
             author_nickname=user_info["nickname"],
             content=comment.content,
             created_at=comment.created_at,
@@ -82,7 +82,10 @@ class CommentService:
         comments_with_tags = await self.comment_repository.get_comments_by_post_id(session, post_id)
 
         author_ids = {row.Comment.author_id for row in comments_with_tags}
-        user_info_map = {author_id: await self.comment_repository.get_user_info(session, author_id) for author_id in author_ids}
+        user_info_map = {
+            author_id: await self.comment_repository.get_user_info(session, author_id)
+            for author_id in author_ids
+        }
 
         parent_comments = [row for row in comments_with_tags if row.Comment.parent_comment_id is None]
         child_comments = [row for row in comments_with_tags if row.Comment.parent_comment_id is not None]
@@ -100,8 +103,8 @@ class CommentService:
                 row.Comment,
                 row.tags or [],
                 row.post_external_id,  # Post의 external_id를 응답에 포함
-                user_info_map[row.Comment.author_id]["user_id"],
-                user_info_map[row.Comment.author_id]["nickname"],
+                user_info_map[row.Comment.author_id]["id"],  # User의 실제 id 전달
+                user_info_map[row.Comment.author_id]["nickname"],  # Tag 모델의 nickname 반환
                 user_info_map[row.Comment.author_id]["profile_image"],
             )
             for row in parent_comments
