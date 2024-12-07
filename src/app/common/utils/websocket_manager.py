@@ -47,7 +47,7 @@ class ConnectionManager:
             "ai_goodbye": "AI 선생님과의 대화가 종료되었습니다.",
             "teacher_goodbye": "선생님과의 대화가 종료되었습니다.",
             "ai_start_subject": "보고서 작성하는 게 너무 힘들지?^^ 도와줘?",
-            "ai_start_menu": "시작할 메뉴를 선택해줘",
+            "ai_start_menu": "시작할 메뉴를 입력해줘",
         }
 
     async def initialize(self, producer: AIOKafkaProducer, consumer: AIOKafkaConsumer):
@@ -80,24 +80,26 @@ class ConnectionManager:
         }
         return message
 
-    async def send_system_message(self, room_id: int, message_type: str):
-        now = datetime.now()
+    async def send_system_message(self, room: Room, message_type: str):
         message = {
-            "room_id": room_id,
+            "room_id": room.id,
+            "title": room.title,
             "sender_id": self.ai_user_id,
             "content": self.system_messages.get(message_type, ""),
             "message_type": "text",
             "user_type": "system",
-            "timestamp": now.strftime("%Y-%m-%d %H시%M분"),
+            "timestamp": datetime.now().isoformat(),
         }
         await self.send_message(message)
 
-    async def handle_help_check_update(self, room_id: int, help_checked: bool):
+    async def handle_help_check_update(self, room: Room, help_checked: bool):
         # 도움 요청 상태 변경에 따른 시스템 메시지 전송
         if help_checked:
-            await self.send_system_message(room_id, "teacher_welcome")
+            await self.send_system_message(room, "ai_goodbye")
+            await self.send_system_message(room, "teacher_welcome")
         else:
-            await self.send_system_message(room_id, "ai_welcome")
+            await self.send_system_message(room, "teacher_goodbye")
+            await self.send_system_message(room, "ai_welcome")
 
     async def connect(self, websocket: WebSocket, room: Room, user_id: int, user_type: UserRole):
         await websocket.accept()
@@ -107,37 +109,37 @@ class ConnectionManager:
 
         self.active_connections[room.id][user_id] = websocket
 
-        if user_type == UserRole.STUDENT:
-            welcome_message = {
-                "room_id": room.id,
-                "title": room.title,
-                "sender_id": self.system_user_id,
-                "content": self.system_messages["ai_welcome"],
-                "message_type": "text",
-                "user_type": "system",
-                "timestamp": datetime.now().isoformat(),
-            }
-            ai_start_message = {
-                "room_id": room.id,
-                "title": room.title,
-                "sender_id": self.ai_user_id,
-                "content": self.system_messages["ai_start_subject"],
-                "message_type": "text",
-                "user_type": "system",
-                "timestamp": datetime.now().isoformat(),
-            }
-            ai_menu_message = {
-                "room_id": room.id,
-                "title": room.title,
-                "sender_id": self.ai_user_id,
-                "content": self.system_messages["ai_start_menu"],
-                "message_type": "text",
-                "user_type": "system",
-                "timestamp": datetime.now().isoformat(),
-            }
-            await self.send_message(welcome_message)
-            await self.send_message(ai_start_message)
-            await self.send_message(ai_menu_message)
+        # if user_type == UserRole.STUDENT:
+        #     welcome_message = {
+        #         "room_id": room.id,
+        #         "title": room.title,
+        #         "sender_id": self.system_user_id,
+        #         "content": self.system_messages["ai_welcome"],
+        #         "message_type": "text",
+        #         "user_type": "system",
+        #         "timestamp": datetime.now().isoformat(),
+        #     }
+        #     ai_start_message = {
+        #         "room_id": room.id,
+        #         "title": room.title,
+        #         "sender_id": self.ai_user_id,
+        #         "content": self.system_messages["ai_start_subject"],
+        #         "message_type": "text",
+        #         "user_type": "ai",
+        #         "timestamp": datetime.now().isoformat(),
+        #     }
+        #     ai_menu_message = {
+        #         "room_id": room.id,
+        #         "title": room.title,
+        #         "sender_id": self.ai_user_id,
+        #         "content": self.system_messages["ai_start_menu"],
+        #         "message_type": "text",
+        #         "user_type": "ai",
+        #         "timestamp": datetime.now().isoformat(),
+        #     }
+        #     await self.send_message(welcome_message)
+        #     await self.send_message(ai_start_message)
+        #     await self.send_message(ai_menu_message)
 
     async def handle_message(self, room: Room, user_id: int, user_type: str, content: str):
 

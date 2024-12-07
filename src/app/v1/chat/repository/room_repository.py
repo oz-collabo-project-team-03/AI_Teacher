@@ -1,5 +1,6 @@
 import logging
-import json
+
+from datetime import datetime
 
 from fastapi import HTTPException
 from odmantic import AIOEngine, query
@@ -8,6 +9,7 @@ from sqlalchemy.exc import NoResultFound, SQLAlchemyError
 from sqlalchemy.future import select
 from sqlalchemy.orm import aliased
 
+from src.config.database.mongo import MongoDB
 from src.app.common.models.tag import Tag
 from src.app.common.utils.consts import UserRole
 from src.app.v1.chat.entity.message import Message
@@ -24,6 +26,8 @@ from src.app.common.utils.websocket_manager import manager
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+mongo = MongoDB()
 
 
 class RoomRepository:
@@ -92,7 +96,6 @@ class RoomRepository:
             try:
                 result = await session.execute(select(User.role).where(User.id == user_id))
                 role = result.scalar_one_or_none()
-                print(f"role이 뭐냐 : {role}")
 
                 if role is None:
                     return False
@@ -139,6 +142,43 @@ class RoomRepository:
             session.add(participant)
 
             await session.commit()
+
+            # 처음 AI 메시지 출력
+            welcome_message = {
+                "room_id": new_room.id,
+                "title": new_room.title,
+                "sender_id": manager.system_user_id,
+                "content": manager.system_messages["ai_welcome"],
+                "message_type": "text",
+                "user_type": "system",
+                "timestamp": datetime.now().isoformat(),
+            }
+            ai_start_message = {
+                "room_id": new_room.id,
+                "title": new_room.title,
+                "sender_id": manager.ai_user_id,
+                "content": manager.system_messages["ai_start_subject"],
+                "message_type": "text",
+                "user_type": "ai",
+                "timestamp": datetime.now().isoformat(),
+            }
+            ai_menu_message = {
+                "room_id": new_room.id,
+                "title": new_room.title,
+                "sender_id": manager.ai_user_id,
+                "content": manager.system_messages["ai_start_menu"],
+                "message_type": "text",
+                "user_type": "ai",
+                "timestamp": datetime.now().isoformat(),
+            }
+            messages = [welcome_message, ai_start_message, ai_menu_message]
+            for i in messages:
+                message_model = Message(**i)
+
+                engine = await mongo.get_engine()
+                if engine:
+                    await engine.save(message_model)
+
             return new_room
 
     @staticmethod
@@ -184,13 +224,13 @@ class RoomRepository:
 
                 await session.commit()
 
-                # Kafka로 상태 변경 알림
-                if manager.producer:
-                    message = {"room_id": room_id, "help_checked": room.help_checked}
-                    await manager.producer.send_and_wait("room_updates", json.dumps(message).encode())
+                # # Kafka로 상태 변경 알림
+                # if manager.producer:
+                #     message = {"room_id": room.id, "help_checked": room.help_checked}
+                #     await manager.producer.send_and_wait(manager.chat_topic, json.dumps(message).encode())
 
                 # 상태 변경에 따른 시스템 메시지 전송
-                await manager.handle_help_check_update(room_id, room.help_checked)
+                await manager.handle_help_check_update(room, room.help_checked)
 
                 return room
 
@@ -404,10 +444,6 @@ class RoomRepository:
                 for room in rooms:
                     # 각 방의 최신 메시지 조회
                     recent_messages = await mongo.find(Message, Message.room_id == room.id, sort=query.desc(Message.timestamp), limit=1)
-
-                    # # 해당 방에 참여한 student_id 조회
-                    # participants = await session.execute(select(Participant.student_id).where(Participant.room_id == room.id))
-                    # student_ids = participants.scalars().all()
 
                     # 해당 방에 참여한 student_id 조회
                     participants = await session.execute(select(Participant).where(Participant.room_id == room.id))
