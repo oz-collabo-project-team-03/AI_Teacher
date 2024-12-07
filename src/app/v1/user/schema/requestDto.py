@@ -100,9 +100,4 @@ class UpdateTeacherProfileRequest(BaseModel):
     profile_image: str | None = None
     organization_name: str | None = None
     organization_type: str | None = None
-<<<<<<< Updated upstream
     position: str | None = None
-
-=======
-    position: str | None = Field(None, alias="organization_position")
->>>>>>> Stashed changes
