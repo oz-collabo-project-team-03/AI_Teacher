@@ -10,7 +10,7 @@ from src.app.common.utils.image import NCPStorageService  # type: ignore
 
 from src.app.v1.auth.repository.oauth_repository import OAuthRepository
 from src.app.v1.auth.schema.requestDto import SocialLoginStudentRequest, SocialLoginTeacherRequest, OAuthRequest
-from src.app.v1.auth.schema.responseDto import RoleResponse
+from src.app.v1.auth.schema.responseDto import TeacherRoleResponse, StudentRoleResponse
 from src.app.v1.auth.service.oauth_service import OAuthService
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.user.schema.requestDto import (
@@ -190,8 +190,7 @@ async def social_login_callback(
 
     return result
 
-
-@router.patch("/social/info/student", response_model=RoleResponse)
+@router.patch("/social/info/student", response_model=StudentRoleResponse)
 async def additional_student_info(
     payload: SocialLoginStudentRequest,
     current_user: dict = Depends(get_current_user),
@@ -204,7 +203,7 @@ async def additional_student_info(
     return await oauth_service.update_student_info(payload=payload, user_id=user_id, session=session)
 
 
-@router.patch("/social/info/teacher", response_model=RoleResponse)
+@router.patch("/social/info/teacher", response_model=TeacherRoleResponse)
 async def additional_teacher_info(
     payload: SocialLoginTeacherRequest,
     current_user: dict = Depends(get_current_user),

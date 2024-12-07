@@ -114,11 +114,11 @@ class OAuthRepository:
                     session.add(Tag(user_id=user.id, nickname=student_data["nickname"]))
 
             if user.student:
-                student = user.student
-            else:
                 student = Student(user_id=user.id)
                 session.add(student)
+                user.student = student
 
+            student = user.student
             for key, value in student_data.items():
                 if hasattr(student, key):
                     setattr(student, key, value)
