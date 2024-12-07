@@ -8,6 +8,7 @@ from sqlalchemy import and_, func
 from sqlalchemy.exc import NoResultFound, SQLAlchemyError
 from sqlalchemy.future import select
 from sqlalchemy.orm import aliased
+from src.config.database import redis
 
 from src.config.database.mongo import MongoDB
 from src.app.common.models.tag import Tag
@@ -143,16 +144,7 @@ class RoomRepository:
 
             await session.commit()
 
-            # 처음 AI 메시지 출력
-            welcome_message = {
-                "room_id": new_room.id,
-                "title": new_room.title,
-                "sender_id": manager.system_user_id,
-                "content": manager.system_messages["ai_welcome"],
-                "message_type": "text",
-                "user_type": "system",
-                "timestamp": datetime.now().isoformat(),
-            }
+            # 처음 AI 메시지 출력 ( 출력되는 순서로 배치 )
             ai_start_message = {
                 "room_id": new_room.id,
                 "title": new_room.title,
@@ -171,6 +163,16 @@ class RoomRepository:
                 "user_type": "ai",
                 "timestamp": datetime.now().isoformat(),
             }
+            welcome_message = {
+                "room_id": new_room.id,
+                "title": new_room.title,
+                "sender_id": manager.system_user_id,
+                "content": manager.system_messages["ai_welcome"],
+                "message_type": "text",
+                "user_type": "system",
+                "timestamp": datetime.now().isoformat(),
+            }
+
             messages = [ai_menu_message, ai_start_message, welcome_message]
             for i in messages:
                 message_model = Message(**i)
@@ -224,13 +226,10 @@ class RoomRepository:
 
                 await session.commit()
 
-                # # Kafka로 상태 변경 알림
-                # if manager.producer:
-                #     message = {"room_id": room.id, "help_checked": room.help_checked}
-                #     await manager.producer.send_and_wait(manager.chat_topic, json.dumps(message).encode())
-
                 # 상태 변경에 따른 시스템 메시지 전송
                 await manager.handle_help_check_update(room, room.help_checked)
+
+                logger.info(f"Room ID {room_id} help_checked 상태가 {room.help_checked}로 변경되었습니다.")
 
                 return room
 
@@ -240,6 +239,25 @@ class RoomRepository:
             except Exception as e:
                 logger.error(f"An unexpected error occurred: {e}")
                 raise HTTPException(status_code=500, detail="{e}")
+
+    @staticmethod
+    async def get_help_checked_from_db(room_id: int) -> bool:
+        """PostgreSQL에서 Room의 help_checked 상태를 조회합니다."""
+        async with SessionLocal() as session:
+            try:
+                query = select(Room).where(Room.id == room_id)
+                result = await session.execute(query)
+                room = result.scalar_one_or_none()
+
+                if room is None:
+                    logger.warning(f"Room {room_id}을(를) 찾을 수 없습니다.")
+                    raise HTTPException(status_code=404, detail="해당 Room ID : {room_id}는 존재하지 않습니다.")
+
+                return room.help_checked
+
+            except Exception as e:
+                logging.error(f"DB에서 help_checked 상태 조회 중 오류 발생: {e}")
+                return False
 
     @staticmethod
     async def get_profile_images(room_id: int) -> tuple[str, str] | None:

@@ -109,57 +109,24 @@ class ConnectionManager:
 
         self.active_connections[room.id][user_id] = websocket
 
-        # if user_type == UserRole.STUDENT:
-        #     welcome_message = {
-        #         "room_id": room.id,
-        #         "title": room.title,
-        #         "sender_id": self.system_user_id,
-        #         "content": self.system_messages["ai_welcome"],
-        #         "message_type": "text",
-        #         "user_type": "system",
-        #         "timestamp": datetime.now().isoformat(),
-        #     }
-        #     ai_start_message = {
-        #         "room_id": room.id,
-        #         "title": room.title,
-        #         "sender_id": self.ai_user_id,
-        #         "content": self.system_messages["ai_start_subject"],
-        #         "message_type": "text",
-        #         "user_type": "ai",
-        #         "timestamp": datetime.now().isoformat(),
-        #     }
-        #     ai_menu_message = {
-        #         "room_id": room.id,
-        #         "title": room.title,
-        #         "sender_id": self.ai_user_id,
-        #         "content": self.system_messages["ai_start_menu"],
-        #         "message_type": "text",
-        #         "user_type": "ai",
-        #         "timestamp": datetime.now().isoformat(),
-        #     }
-        #     await self.send_message(welcome_message)
-        #     await self.send_message(ai_start_message)
-        #     await self.send_message(ai_menu_message)
-
     async def handle_message(self, room: Room, user_id: int, user_type: str, content: str):
-
-        # 선생과 학생 대화
-        message = {
-            "room_id": room.id,
-            "title": room.title,
-            "sender_id": user_id,
-            "content": content,
-            "message_type": "text",
-            "user_type": user_type,
-            "timestamp": datetime.now().isoformat(),
-        }
-        await self.send_message(message)
-
-        if not room.help_checked and user_type == "student":
+        print("=====================================================")
+        print(f"handle check {room.help_checked}")
+        print("=====================================================")
+        if room.help_checked == False and user_type == "student":
             await self.ai_chat(room, content)
-            
-            # ai_response = await self.create_message(room, self.ai_user_id, "ai", "AI_Message")
-            # await self.send_message(ai_response)
+        else:
+            # 선생과 학생 대화
+            message = {
+                "room_id": room.id,
+                "title": room.title,
+                "sender_id": user_id,
+                "content": content,
+                "message_type": "text",
+                "user_type": user_type,
+                "timestamp": datetime.now().isoformat(),
+            }
+            await self.send_message(message)
 
     async def disconnect(self, room_id: int, user_id: int):
         if room_id in self.active_connections:
@@ -196,7 +163,6 @@ class ConnectionManager:
             stream = await self.client.chat.completions.create(
                 model="gpt-4-turbo",
                 messages=[
-                    # {"role": "system", "content": "너는 수행평가를 돕는 친절한 AI 선생님이야."},
                     {"role": "user", "content": content},  # 사용자 메시지 추가
                 ],
                 stream=True,

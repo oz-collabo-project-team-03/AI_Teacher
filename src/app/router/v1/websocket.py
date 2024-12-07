@@ -1,5 +1,6 @@
+import asyncio
 import logging
-
+from src.app.common.utils import redis_update
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -16,7 +17,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Websocket"])
-
 chat_service = ChatService()
 
 
@@ -28,6 +28,8 @@ async def websocket(
     user_id: int,
     # current_user: dict = Depends(get_current_user_ws),
 ):
+    # Redis 상태 업데이트를 백그라운드에서 실행
+    redis_update_task = asyncio.create_task(redis_update.update_help_checked(room_id, websocket))
     try:
         user_id = user_id
         # if not current_user:
@@ -55,21 +57,22 @@ async def websocket(
         while True:
             data = await websocket.receive_text()
 
+            # DB에서 최신 help_checked 상태 가져오기
+            new_help_checked = await RoomRepository.get_help_checked_from_db(room_id)
+            print("=====================================================")
+            print(f"Websocket check {new_help_checked}")
+            print("=====================================================")
+
+            # 상태가 변경된 경우만 업데이트
+            if room.help_checked != new_help_checked:
+                room.help_checked = new_help_checked
+                logger.info(f"Room {room_id} help_checked 상태가 업데이트됨: {room.help_checked}")
+
             if not await manager.can_send_message(room_id, user_type):
                 logger.warning("당신은 선생이라 메시지를 보낼 수 없습니다.")
                 continue
 
             await manager.handle_message(room, user_id, user_type, data)
-
-            # help_checked가 True일 때 AI의 답변을 보내지 않도록 조건 추가
-            # if room.help_checked and (user_type == UserRole.STUDENT or user_type == UserRole.TEACHER):
-            #     await manager.handle_message(room, user_id, user_type, data)
-            #     # await manager.send_message(message)  # 선생과 학생 간의 대화 전송
-            #     logger.info(f"Sending message: {message}")
-            #     continue
-            # # AI 대화
-            # logger.info(f"Sending message: {message}")
-            # await manager.send_message(message)
 
     except HTTPException as he:
         await websocket.close(code=4004)
