@@ -4,8 +4,8 @@ from sqlalchemy import BigInteger, Boolean, DateTime, Enum, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.app.common.utils.consts import SocialProvider, UserRole
-from src.config.database import Base
 from src.app.v1.chat.entity.participant import Participant
+from src.config.database import Base
 
 
 class User(Base):

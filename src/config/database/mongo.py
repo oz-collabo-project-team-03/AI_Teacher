@@ -1,6 +1,7 @@
-from contextlib import asynccontextmanager
 import os
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
+
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 from odmantic import AIOEngine

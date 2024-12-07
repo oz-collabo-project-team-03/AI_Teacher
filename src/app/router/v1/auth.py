@@ -1,16 +1,29 @@
 import logging
 from typing import Union
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Response, Query, Path
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    Header,
+    HTTPException,
+    Path,
+    Query,
+    Response,
+)
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.app.common.utils.consts import UserRole, SocialProvider
+from src.app.common.utils.consts import SocialProvider, UserRole
 from src.app.common.utils.dependency import get_current_user, get_session
 from src.app.common.utils.image import NCPStorageService  # type: ignore
-
 from src.app.v1.auth.repository.oauth_repository import OAuthRepository
-from src.app.v1.auth.schema.requestDto import SocialLoginStudentRequest, SocialLoginTeacherRequest, OAuthRequest
-from src.app.v1.auth.schema.responseDto import TeacherRoleResponse, StudentRoleResponse
+from src.app.v1.auth.schema.requestDto import (
+    OAuthRequest,
+    SocialLoginStudentRequest,
+    SocialLoginTeacherRequest,
+)
+from src.app.v1.auth.schema.responseDto import SocialLoginResponse, TeacherRoleResponse
 from src.app.v1.auth.service.oauth_service import OAuthService
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.user.schema.requestDto import (
@@ -35,8 +48,6 @@ from src.app.v1.user.schema.responseDto import (
     UserInfoResponse,
 )
 from src.app.v1.user.service.user_service import UserService
-from fastapi.responses import RedirectResponse
-
 
 logger = logging.getLogger(__name__)
 
@@ -167,19 +178,20 @@ async def create_study_group(
 
 
 # 로그인 엔드포인트 - 테스트
-# @router.get("/login/{provider}")
-# async def login(provider: str):
-#     oauth_url = oauth_service.get_oauth_url(provider)
-#     print(f"Generated OAuth URL: {oauth_url}")
-#     return RedirectResponse(oauth_url)
+@router.get("/login/{provider}")
+async def login(provider: str):
+    oauth_url = oauth_service.get_oauth_url(provider)
+    print(f"Generated OAuth URL: {oauth_url}")
+    return RedirectResponse(oauth_url)
+
 
 # Callback 엔드포인트
 @router.post("/login/callback/{provider}")
 async def social_login_callback(
-        response: Response,
-        body: OAuthRequest,
-        provider: str = Path(...),
-        session: AsyncSession = Depends(get_session),
+    response: Response,
+    body: OAuthRequest,
+    provider: str = Path(...),
+    session: AsyncSession = Depends(get_session),
 ):
     code = body.code
 
@@ -191,7 +203,8 @@ async def social_login_callback(
 
     return result
 
-@router.patch("/social/info/student", response_model=StudentRoleResponse)
+
+@router.patch("/social/info/student", response_model=MessageResponse)
 async def additional_student_info(
     payload: SocialLoginStudentRequest,
     current_user: dict = Depends(get_current_user),

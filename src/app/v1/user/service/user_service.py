@@ -572,8 +572,8 @@ class UserService:
         ]
 
         # like_count와 comment_count 계산
-        like_count = sum(post_data['post'].like_count for post_data in posts.values())  # 'post' 객체에서 like_count 접근
-        comment_count = sum(post_data['post'].comment_count for post_data in posts.values())  # 'post' 객체에서 comment_count 접근
+        like_count = sum(post_data["post"].like_count for post_data in posts.values())  # 'post' 객체에서 like_count 접근
+        comment_count = sum(post_data["post"].comment_count for post_data in posts.values())  # 'post' 객체에서 comment_count 접근
 
         common_data = CommonProfileResponse(
             role=role,

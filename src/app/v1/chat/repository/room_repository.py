@@ -1,28 +1,25 @@
 import logging
+import json
 
-from requests import session
-from sqlalchemy.exc import NoResultFound, SQLAlchemyError
-from sqlalchemy import case, func, and_
-from sqlalchemy.orm import aliased
-from sqlalchemy.future import select
-from odmantic import AIOEngine, query
 from fastapi import HTTPException
-from datetime import datetime
+from odmantic import AIOEngine, query
+from sqlalchemy import and_, func
+from sqlalchemy.exc import NoResultFound, SQLAlchemyError
+from sqlalchemy.future import select
+from sqlalchemy.orm import aliased
+
 from src.app.common.models.tag import Tag
+from src.app.common.utils.consts import UserRole
 from src.app.v1.chat.entity.message import Message
 from src.app.v1.chat.entity.participant import Participant
 from src.app.v1.chat.entity.room import Room
+from src.app.v1.chat.schema.room_response import RoomHelpResponse, RoomListResponse
 from src.app.v1.user.entity.student import Student
-from src.app.v1.user.entity.teacher import Teacher
 from src.app.v1.user.entity.study_group import StudyGroup
+from src.app.v1.user.entity.teacher import Teacher
 from src.app.v1.user.entity.user import User
-from src.app.v1.chat.entity.room import Room
 from src.config.database.postgresql import SessionLocal
-from src.app.common.utils.consts import UserRole
-from src.app.v1.chat.schema.room_response import (
-    RoomListResponse,
-    RoomHelpResponse,
-)
+from src.app.common.utils.websocket_manager import manager
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -186,6 +183,15 @@ class RoomRepository:
                 room.updated_at = func.now()
 
                 await session.commit()
+
+                # Kafka로 상태 변경 알림
+                if manager.producer:
+                    message = {"room_id": room_id, "help_checked": room.help_checked}
+                    await manager.producer.send_and_wait("room_updates", json.dumps(message).encode())
+
+                # 상태 변경에 따른 시스템 메시지 전송
+                await manager.handle_help_check_update(room_id, room.help_checked)
+
                 return room
 
             except SQLAlchemyError as e:
@@ -293,8 +299,6 @@ class RoomRepository:
                     recent_messages = await mongo.find(Message, Message.room_id == room.id, sort=query.desc(Message.timestamp), limit=1)
                     if recent_messages:
                         message = recent_messages[0]
-                        # date_object = datetime.strptime(message.timestamp, "%Y-%m-%d %H시%M분")
-                        # formatted_date = date_object.strftime("%Y-%m-%d %H시%M분")
 
                         room_response = RoomListResponse(
                             room_id=room.id,
@@ -347,11 +351,11 @@ class RoomRepository:
                     .join(Room, Participant.room_id == Room.id)
                     .where(
                         and_(
-                            Participant.teacher_id == user_id,   # 해당 선생님과 연결된 Room
-                            Room.help_checked.is_(True),        # help_checked가 True인 Room
+                            Participant.teacher_id == user_id,  # 해당 선생님과 연결된 Room
+                            Room.help_checked.is_(True),  # help_checked가 True인 Room
                         )
                     )
-                    .distinct(Participant.student_id)           # 학생별로 한 개의 Room만 선택
+                    .distinct(Participant.student_id)  # 학생별로 한 개의 Room만 선택
                     .order_by(Participant.student_id, Room.updated_at.desc())  # 최신 Room 우선 정렬
                     .subquery()
                 )
@@ -385,47 +389,6 @@ class RoomRepository:
                 logger.error(f"An unexpected error occurred: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
-    # @staticmethod
-    # async def get_students_by_teacher(teacher_id: int):
-    #     async with SessionLocal() as session:
-    #         try:
-    #             student_query = (
-    #                 select(
-    #                     User.id.label("student_id"),
-    #                     User.profile_image.label("student_image_url"),
-    #                     Tag.nickname.label("student_nickname"),
-    #                     Room.id.label("room_id"),
-    #                     Room.help_checked,
-    #                     func.count(Room.id).label("room_count"),
-    #                 )
-    #                 .join(Participant, Participant.student_id == User.id)
-    #                 .join(Tag, Tag.user_id == User.id)
-    #                 .join(Room, Room.id == Participant.room_id)
-    #                 .where(Participant.teacher_id == teacher_id)
-    #                 .group_by(User.id, Tag.nickname, Room.id)
-    #             )
-    #             students_result = await session.execute(student_query)
-    #             return students_result.fetchall()
-    #         except SQLAlchemyError as e:
-    #             logger.error(f"Database error in get_teacher_info: {e}")
-    #             raise HTTPException(status_code=500, detail="DB 오류 발생")
-
-    # @staticmethod
-    # async def fetch_teacher_info(teacher_id: int):
-    #     async with SessionLocal() as session:
-    #         try:
-    #             teacher_query = (
-    #                 select(User.profile_image.label("teacher_image_url"), Tag.nickname.label("teacher_nickname"))
-    #                 .join(Tag, Tag.user_id == User.id)
-    #                 .where(User.id == teacher_id)
-    #             )
-
-    #             teacher_result = await session.execute(teacher_query)
-    #             return teacher_result.first()
-    #         except SQLAlchemyError as e:
-    #             logger.error(f"Database error in get_teacher_info: {e}")
-    #             raise HTTPException(status_code=500, detail="DB 오류 발생")
-
     @staticmethod
     async def get_room_help_list(mongo: AIOEngine, user_id: int) -> list[RoomHelpResponse] | None:
         async with SessionLocal() as session:
@@ -442,26 +405,27 @@ class RoomRepository:
                     # 각 방의 최신 메시지 조회
                     recent_messages = await mongo.find(Message, Message.room_id == room.id, sort=query.desc(Message.timestamp), limit=1)
 
-                    # 해당 방에 참여한 student_id 조회
-                    participants = await session.execute(select(Participant.student_id).where(Participant.room_id == room.id))
-                    student_ids = participants.scalars().all()
+                    # # 해당 방에 참여한 student_id 조회
+                    # participants = await session.execute(select(Participant.student_id).where(Participant.room_id == room.id))
+                    # student_ids = participants.scalars().all()
 
-                    # student_ids로 Tag와 User를 통해 nickname 조회
+                    # 해당 방에 참여한 student_id 조회
+                    participants = await session.execute(select(Participant).where(Participant.room_id == room.id))
+                    participant = participants.scalar_one_or_none()
+
+                    # participant의 student_id로 Tag와 User를 통해 nickname 조회
                     nickname = None
-                    if student_ids:
-                        tags = await session.execute(select(Tag).join(User).where(User.id.in_(student_ids)))
-                        tag = tags.scalar_one_or_none()  # 첫 번째 닉네임만 가져옴
+                    if participant:
+                        tags = await session.execute(select(Tag).join(User).where(User.id == participant.student_id))
+                        tag = tags.scalar_one_or_none()
                         if tag:
                             nickname = tag.nickname
 
                     if recent_messages:
                         message = recent_messages[0]
-                        # date_object = datetime.strptime(message.timestamp, "%Y-%m-%d %H시%M분")
-                        # formatted_date = date_object.strftime("%Y-%m-%d %H시%M분")
-
                         room_response = RoomHelpResponse(
                             room_id=room.id,
-                            student_id=user_id,
+                            student_id=participant.student_id if participant else None,
                             student_nickname=nickname,
                             help_checked=room.help_checked,
                             recent_message=message.content,
@@ -470,7 +434,7 @@ class RoomRepository:
                     else:
                         room_response = RoomHelpResponse(
                             room_id=room.id,
-                            student_id=user_id,
+                            student_id=participant.student_id if participant else None,
                             student_nickname=nickname,
                             help_checked=room.help_checked,
                             recent_message=None,

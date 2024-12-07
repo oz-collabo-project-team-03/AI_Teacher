@@ -1,6 +1,8 @@
-from bson import ObjectId
-from odmantic import Model, Field
 from datetime import datetime
+
+from bson import ObjectId
+from odmantic import Field, Model
+
 from src.app.common.utils.consts import MessageType
 
 

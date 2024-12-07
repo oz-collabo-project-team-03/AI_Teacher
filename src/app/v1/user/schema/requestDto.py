@@ -85,7 +85,6 @@ class StudyGroupRequest(BaseModel):
     name: str
 
 
-
 class UpdateStudentProfileRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     nickname: str | None = None
@@ -94,11 +93,16 @@ class UpdateStudentProfileRequest(BaseModel):
     interest: str | None = None
     description: str | None = None
 
+
 class UpdateTeacherProfileRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     nickname: str | None = None
     profile_image: str | None = None
     organization_name: str | None = None
     organization_type: str | None = None
+<<<<<<< Updated upstream
     position: str | None = None
 
+=======
+    position: str | None = Field(None, alias="organization_position")
+>>>>>>> Stashed changes

@@ -1,11 +1,14 @@
 import logging
-from src.app.v1.user.entity.user import User
+
 from sqlalchemy.exc import NoResultFound, SQLAlchemyError
 from sqlalchemy.future import select
+
+from src.app.v1.user.entity.user import User
 from src.config.database.postgresql import SessionLocal
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 class ChatRepository:
 
