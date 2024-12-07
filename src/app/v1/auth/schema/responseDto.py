@@ -46,9 +46,15 @@ class SocialLoginResponse(BaseModel):
     role: str | None
     message: str
 
-class RoleResponse(BaseModel):
+class StudentRoleResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     role: str
     first_login: bool
     study_group: bool
+    message: str
+
+class TeacherRoleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    role: str
+    first_login: bool
     message: str
