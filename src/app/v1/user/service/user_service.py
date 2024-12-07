@@ -245,9 +245,8 @@ class UserService:
                 samesite="Strict",  # type: ignore # CSRF(Cross-Site Request Forgery) 공격을 방지
                 max_age=REFRESH_TOKEN_TTL,
             )
-            first_login = False
-            if role == "student" and user.first_login:
-                first_login = True
+            first_login = user.first_login
+            if user.first_login:
                 user.first_login = False
                 session.add(user)
                 await session.commit()
@@ -266,7 +265,7 @@ class UserService:
                 "token_type": "Bearer",
                 "expires_in": 45 * 60,
                 "role": role,
-                "first_login": first_login,  # 학생인 경우에만 의미 있는 값
+                "first_login": first_login,
                 "study_group": is_connected_to_group,
                 "message": "로그인에 성공하였습니다.",
             }
@@ -469,19 +468,15 @@ class UserService:
         try:
             student_id = await self.user_repo.get_student_id(session, current_user["user_id"])
             if not student_id:
-                logger.warning(f"No student found for user_id={current_user['user_id']}")
                 raise HTTPException(status_code=404, detail="학생 정보를 찾을 수 없습니다.")
         except Exception as e:
-            logger.error(f"Error fetching student ID: {e}")
             raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
         try:
             fetched_teacher_id = await self.user_repo.get_teacher_by_id_and_name(session, teacher_id, teacher_name)
             if not fetched_teacher_id:
-                logger.warning(f"Teacher not found or name mismatch: teacher_id={teacher_id}, name={teacher_name}")
                 raise HTTPException(status_code=404, detail="선생님 정보를 찾을 수 없습니다.")
         except Exception as e:
-            logger.error(f"Error fetching teacher: {e}")
             raise HTTPException(status_code=500, detail="데이터베이스 오류가 발생했습니다.")
 
         try:
@@ -562,12 +557,16 @@ class UserService:
     # 내가 내 프로필 조회
     async def get_my_profile(self, user_id: int, role: str, session: AsyncSession):
 
-        if role not in [UserRole.STUDENT.value, UserRole.TEACHER.value]:
-            raise HTTPException(status_code=400, detail="유효하지 않은 역할입니다.")
+        # if role not in [UserRole.STUDENT.value, UserRole.TEACHER.value]:
+        #     raise HTTPException(status_code=400, detail="유효하지 않은 역할입니다.")
 
         user = await self.user_repo.get_user_with_profile(user_id, session)
         if not user:
             raise HTTPException(status_code=404, detail="사용자 정보를 찾을 수 없습니다.")
+
+        role = user.role
+        if role not in [UserRole.STUDENT.value, UserRole.TEACHER.value]:
+            raise HTTPException(status_code=400, detail="유효하지 않은 역할입니다.")
 
         if not user.tag or not user.tag.nickname:
             raise HTTPException(status_code=400, detail="사용자의 닉네임이 설정되지 않았습니다.")
@@ -598,6 +597,13 @@ class UserService:
         logger.debug(f"Common data: {common_data}")
         logger.debug(f"Posts data: {posts_data}")
 
+        if role == UserRole.STUDENT.value:
+            if not user.student:
+                raise HTTPException(status_code=404, detail="학생 정보를 찾을 수 없습니다.")
+            is_connected_to_group = await self.user_repo.is_student_connected_to_group(
+                user.student.id, session
+            )
+
         # 학생 프로필 생성
         if role == UserRole.STUDENT.value:
             if not user.student:
@@ -609,6 +615,8 @@ class UserService:
                 career_aspiration=user.student.career_aspiration,
                 interest=user.student.interest,
                 description=user.student.description,
+                study_group=is_connected_to_group,
+                first_login=user.first_login,
                 posts=posts_data,
             )
             logger.debug(f"Student profile: {student_profile}")
@@ -623,6 +631,7 @@ class UserService:
                 organization_name=user.teacher.organization.name,
                 organization_type=user.teacher.organization.type,
                 position=user.teacher.organization.position,
+                first_login=user.first_login,
                 posts=posts_data,
             )
             logger.debug(f"Teacher profile: {teacher_profile}")
