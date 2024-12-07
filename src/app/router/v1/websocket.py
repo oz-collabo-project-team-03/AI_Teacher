@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from src.app.common.utils import redis_update
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -28,8 +27,6 @@ async def websocket(
     user_id: int,
     # current_user: dict = Depends(get_current_user_ws),
 ):
-    # Redis 상태 업데이트를 백그라운드에서 실행
-    redis_update_task = asyncio.create_task(redis_update.update_help_checked(room_id, websocket))
     try:
         user_id = user_id
         # if not current_user:
