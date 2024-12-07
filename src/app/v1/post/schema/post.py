@@ -28,7 +28,7 @@ class LikeRequest(BaseModel):
 
 
 class PostGetResponse(BaseModel):
-    user_id: str
+    user_id: int
     profile_image: str
     career_aspiration: str | None = None
     interest: str | None = None
