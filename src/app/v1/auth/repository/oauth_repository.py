@@ -113,7 +113,7 @@ class OAuthRepository:
                 else:
                     session.add(Tag(user_id=user.id, nickname=student_data["nickname"]))
 
-            if user.student:
+            if not user.student:
                 student = Student(user_id=user.id)
                 session.add(student)
                 user.student = student
