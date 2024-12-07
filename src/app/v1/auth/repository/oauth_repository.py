@@ -17,6 +17,7 @@ from src.app.common.models.tag import Tag
 from src.app.common.utils.consts import SocialProvider, UserRole
 from src.app.v1.user.entity.organization import Organization
 from src.app.v1.user.entity.student import Student
+from src.app.v1.user.entity.study_group import StudyGroup
 from src.app.v1.user.entity.teacher import Teacher
 from src.app.v1.user.entity.user import User
 
@@ -89,6 +90,16 @@ class OAuthRepository:
         # if not user:
         #     logger.warning(f"User with ID {user_id} not found.")
         # return user
+
+    async def is_student_connected_to_teacher(self, student_id: int, session: AsyncSession) -> bool:
+        query = (
+            select(StudyGroup)
+            .where(StudyGroup.student_id == student_id)
+        )
+        result = await session.execute(query)
+        # StudyGroup에 해당 student_id가 존재하면 True, 없으면 False 반환
+        return result.scalar_one_or_none() is not None
+
 
     async def update_student(self, user_id: int, student_data: dict, session: AsyncSession) -> User:
         try:

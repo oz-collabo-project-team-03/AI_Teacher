@@ -1,30 +1,22 @@
 import os
 import pdb
 import uuid
-from datetime import datetime, timedelta
-from typing import Union
-
+from datetime import timedelta
 import httpx
 import jwt
 import requests  # type: ignore
 from dotenv import load_dotenv
 from fastapi import HTTPException, Depends
 from fastapi.responses import Response
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from ulid import ulid  # type: ignore
 
-from src.app.common.utils.consts import UserRole, SocialProvider
-from src.app.common.utils.dependency import get_session
-from src.app.common.utils.redis_utils import save_to_redis, get_redis_key_refresh_token, get_redis_key_jti, \
-    get_from_redis
+from src.app.common.utils.consts import UserRole
+from src.app.common.utils.redis_utils import save_to_redis, get_redis_key_refresh_token, get_redis_key_jti
 from src.app.common.utils.security import create_refresh_token, create_access_token, verify_access_token
 from src.app.common.utils.verify_password import generate_random_social_password
 from src.app.v1.auth.repository.oauth_repository import OAuthRepository
-from src.app.v1.user.entity.organization import Organization
-from src.app.v1.user.entity.student import Student
-from src.app.v1.user.entity.teacher import Teacher
+
 from src.app.v1.user.entity.user import User
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.auth.schema.requestDto import SocialLoginStudentRequest, SocialLoginTeacherRequest
@@ -258,9 +250,13 @@ class OAuthService:
 
         updated_user = await self.oauth_repo.update_student(user_id, payload.dict(), session)
 
+        #선생님과 연결 여부 확인
+        is_connected_to_teacher = await self.oauth_repo.is_student_connected_to_teacher(updated_user.student.id, session)
+
         return {
             "role":updated_user.role.value,
             "first_login":updated_user.first_login,
+            "study_group": is_connected_to_teacher,
             "message": "학생 회원정보가 성공적으로 업데이트되었습니다."
         }
 
