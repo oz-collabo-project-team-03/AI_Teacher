@@ -96,9 +96,9 @@ class UpdateStudentProfileRequest(BaseModel):
 
 class UpdateTeacherProfileRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    nickname: str | None
+    nickname: str | None = None
     profile_image: str | None = None
     organization_name: str | None = None
     organization_type: str | None = None
-    position: str | None
+    position: str | None = None
 

@@ -1,5 +1,6 @@
 import logging
 import os
+import pdb
 import random
 import re
 import string
@@ -452,10 +453,7 @@ class UserService:
 
     # 학생 최초 로그인 시 교사 선택
     async def create_study_group(self, session: AsyncSession, current_user: dict, teacher_id: int, teacher_name: str) -> dict:
-        logger.info(f"Creating study group for user_id={current_user['user_id']}")
-
         if current_user["role"].upper() != "STUDENT":
-            logger.warning(f"Unauthorized role: {current_user['role']}")
             raise HTTPException(status_code=403, detail="학생만 스터디 그룹을 생성할 수 있습니다.")
 
         try:
@@ -694,8 +692,8 @@ class UserService:
             organization.name = update_data["organization_name"]
         if "organization_type" in update_data:
             organization.type = update_data["organization_type"]
-        if "organization_position" in update_data:
-            organization.position = update_data["organization_position"]
+        if "position" in update_data:
+            organization.position = update_data["position"]
 
         await session.commit()
 
