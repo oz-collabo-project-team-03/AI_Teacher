@@ -226,6 +226,15 @@ class UserRepository:
             for teacher in teachers
         ]
 
+    async def is_student_connected_to_group(self, student_id: int, session: AsyncSession) -> bool:
+        query = (
+            select(StudyGroup)
+            .where(StudyGroup.student_id == student_id)
+        )
+        result = await session.execute(query)
+        # StudyGroup에 해당 student_id가 존재하면 True, 없으면 False 반환
+        return result.scalar_one_or_none() is not None
+
     # 학생 최초 로그인 시 선생님 조회
     async def get_student_id(self, session: AsyncSession, user_id: int) -> int | None:
         query = select(Student.id).where(Student.user_id == user_id)

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.utils.dependency import get_current_user, get_session
 from src.app.common.utils.image import NCPStorageService  # type: ignore
+from src.app.v1.auth.repository.oauth_repository import OAuthRepository
 from src.app.v1.auth.schema.responseDto import MessageResponse
 from src.app.v1.user.repository.user_repository import UserRepository
 from src.app.v1.user.schema.requestDto import (
