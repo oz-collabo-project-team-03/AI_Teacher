@@ -1,7 +1,7 @@
 import os
-
 from dotenv import load_dotenv
 from redis.asyncio import Redis
+
 
 load_dotenv()
 
@@ -15,6 +15,10 @@ redis_cache: Redis = Redis(
     db=REDIS_DB_CACHE,
     decode_responses=True,
 )
+
+room_redis = Redis.from_url(f"redis://{REDIS_HOST}:{REDIS_PORT}", decode_responses=True)
+# Pub/Sub 채널 이름 정의
+ROOM_HELP_CHECKED_CHANNEL = "room:help_checked"
 
 
 def get_redis_cache() -> Redis:
