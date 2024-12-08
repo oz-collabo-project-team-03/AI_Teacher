@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 from datetime import datetime
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from dotenv import load_dotenv
-from fastapi import WebSocket
+from fastapi import WebSocket, HTTPException
 from sqlalchemy.future import select
 from typing import Any
 from src.app.common.utils.consts import UserRole
@@ -113,20 +113,33 @@ class ConnectionManager:
         print("=====================================================")
         print(f"handle check {room.help_checked}")
         print("=====================================================")
-        if room.help_checked == False and user_type == "student":
-            await self.ai_chat(room, content)
-        else:
-            # 선생과 학생 대화
-            message = {
-                "room_id": room.id,
-                "title": room.title,
-                "sender_id": user_id,
-                "content": content,
-                "message_type": "text",
-                "user_type": user_type,
-                "timestamp": datetime.now().isoformat(),
-            }
-        await self.send_message(message)
+        try:
+            if room.help_checked == False and user_type == "student" and user_id != None:
+                await self.ai_chat(room, content)
+                message = {
+                    "room_id": room.id,
+                    "title": room.title,
+                    "sender_id": user_id,
+                    "content": content,
+                    "message_type": "text",
+                    "user_type": user_type,
+                    "timestamp": datetime.now().isoformat(),
+                }
+                await self.send_message(message)
+            else:
+                # 선생과 학생 대화
+                message = {
+                    "room_id": room.id,
+                    "title": room.title,
+                    "sender_id": user_id,
+                    "content": content,
+                    "message_type": "text",
+                    "user_type": user_type,
+                    "timestamp": datetime.now().isoformat(),
+                }
+                await self.send_message(message)
+        except Exception as e:
+            raise HTTPException(status_code=404, detail="Request의 정확한 전달이 필요합니다.")
 
     async def disconnect(self, room_id: int, user_id: int):
         if room_id in self.active_connections:
