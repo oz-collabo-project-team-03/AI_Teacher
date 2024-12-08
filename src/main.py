@@ -109,6 +109,7 @@ origins = [
     "http://localhost:8000",
     "http://sam-test.kprolabs.space:8000",
     "http://kong.kprolabs.space:8000",
+    "http://front.suhaengssaem.bucket.s3-website.kr.object.ncloudstorage.com/",
 ]
 
 app.add_middleware(
