@@ -126,7 +126,7 @@ class ConnectionManager:
                 "user_type": user_type,
                 "timestamp": datetime.now().isoformat(),
             }
-            await self.send_message(message)
+        await self.send_message(message)
 
     async def disconnect(self, room_id: int, user_id: int):
         if room_id in self.active_connections:
