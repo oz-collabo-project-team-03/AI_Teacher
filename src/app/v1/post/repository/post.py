@@ -360,9 +360,8 @@ class PostRepository:
 
             load_dotenv()
 
-            host = os.getenv("HOST", "127.0.0.1:8000")
-
-            base_url = f"http://{host}/posts"
+            host = os.getenv("HOST", "http://127.0.0.1:8000")
+            base_url = f"{host}/posts/me"
 
             # 페이지네이션 정보
             next_page = f"{base_url}?page={page + 1}"
@@ -463,8 +462,8 @@ class PostRepository:
                 posts.append(post_data)
 
             load_dotenv()
-            host = os.getenv("HOST", "127.0.0.1:8000")
-            base_url = f"http://{host}/posts/me"
+            host = os.getenv("HOST", "http://127.0.0.1:8000")
+            base_url = f"{host}/posts/me"
 
             # 페이지네이션 정보
             next_page = f"{base_url}?page={page + 1}" if (page * PAGE_SIZE) < total_count else None
