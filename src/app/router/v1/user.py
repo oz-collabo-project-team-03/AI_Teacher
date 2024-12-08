@@ -14,7 +14,7 @@ from src.app.v1.user.schema.requestDto import (
 )
 from src.app.v1.user.schema.responseDto import (
     StudentProfileResponse,
-    TeacherProfileResponse,
+    TeacherProfileResponse, StudentAddProfileResponse, TeacherAddProfileResponse,
 )
 from src.app.v1.user.service.user_service import UserService
 
@@ -39,7 +39,7 @@ async def get_profile(
 
 
 # 타인 -> 내 프로필 조회
-@router.get("/profile/{user_id}", response_model=Union[StudentProfileResponse, TeacherProfileResponse])
+@router.get("/profile/{user_id}", response_model=Union[StudentAddProfileResponse, TeacherAddProfileResponse])
 async def get_user_profile(
     user_id: int,
     session: AsyncSession = Depends(get_session),
