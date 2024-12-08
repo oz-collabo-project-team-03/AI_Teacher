@@ -101,13 +101,13 @@ class RoomService:
             teacher_profile=teacher_profile or "default_teacher_image.jpg",
             student_nickname=student_nickname or "학생",
             teacher_nickname=teacher_nickname or "선생님",
-            page=page,
+            next_num=page + 1 if (page * page_size) < total_messages else None,
+            previous=page - 1 if page > 1 else None,
             total_pages=total_pages,
             total_messages=total_messages,
         )
 
     # 관리 학생 목록 조회
-
     async def get_students(self, user_id: int):
         # 1. Check if the user is a teacher
         teacher_id = await self.room_repository.user_exists(user_id)
