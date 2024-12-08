@@ -113,30 +113,21 @@ class ConnectionManager:
         print("=====================================================")
         print(f"handle check {room.help_checked}")
         print("=====================================================")
+        message = {
+            "room_id": room.id,
+            "title": room.title,
+            "sender_id": user_id,
+            "content": content,
+            "message_type": "text",
+            "user_type": user_type,
+            "timestamp": datetime.now().isoformat(),
+        }
         try:
             if room.help_checked == False and user_type == "student" and user_id != None:
-                message = {
-                    "room_id": room.id,
-                    "title": room.title,
-                    "sender_id": user_id,
-                    "content": content,
-                    "message_type": "text",
-                    "user_type": user_type,
-                    "timestamp": datetime.now().isoformat(),
-                }
                 await self.send_message(message)
                 await self.ai_chat(room, content)
             else:
                 # 선생과 학생 대화
-                message = {
-                    "room_id": room.id,
-                    "title": room.title,
-                    "sender_id": user_id,
-                    "content": content,
-                    "message_type": "text",
-                    "user_type": user_type,
-                    "timestamp": datetime.now().isoformat(),
-                }
                 await self.send_message(message)
         except Exception as e:
             raise HTTPException(status_code=404, detail="Request의 정확한 전달이 필요합니다.")

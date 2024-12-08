@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from odmantic import Field
 from pydantic import BaseModel, ConfigDict
 
 from src.app.common.utils.consts import MessageType
@@ -32,7 +33,8 @@ class RoomListResponse(BaseModel):
 
 
 class PaginationResponse(BaseModel):
-    current_page: int
+    next: int | None
+    previous: int | None
     total_pages: int
     total_messages: int
 
@@ -68,7 +70,8 @@ class RoomMessagesListResponse(BaseModel):
         teacher_profile: str,
         student_nickname: str,
         teacher_nickname: str,
-        page: int,
+        next_num: int | None,
+        previous: int | None,
         total_pages: int,
         total_messages: int,
     ) -> "RoomMessagesListResponse":
@@ -87,7 +90,7 @@ class RoomMessagesListResponse(BaseModel):
                 )
                 for msg in messages
             ],
-            pagination=PaginationResponse(current_page=page, total_pages=total_pages, total_messages=total_messages),
+            pagination=PaginationResponse(next=next_num, previous=previous, total_pages=total_pages, total_messages=total_messages),
         )
 
 
