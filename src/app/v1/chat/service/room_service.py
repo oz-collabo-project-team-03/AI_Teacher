@@ -14,7 +14,7 @@ from src.app.v1.chat.schema.room_response import (
     TeacherStudentsResponse,
 )
 
-AI_PROFILE = "https://kr.object.ncloudstorage.com/backendsam/AI_Profile/AI_%EC%BA%90%EB%A6%AD%ED%84%B0.jpg"
+AI_PROFILE = "https://kr.object.ncloudstorage.com/backendsam/AI_Profile/AI_chat.jpg"
 
 
 class RoomService:

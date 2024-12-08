@@ -115,7 +115,6 @@ class ConnectionManager:
         print("=====================================================")
         try:
             if room.help_checked == False and user_type == "student" and user_id != None:
-                await self.ai_chat(room, content)
                 message = {
                     "room_id": room.id,
                     "title": room.title,
@@ -126,6 +125,7 @@ class ConnectionManager:
                     "timestamp": datetime.now().isoformat(),
                 }
                 await self.send_message(message)
+                await self.ai_chat(room, content)
             else:
                 # 선생과 학생 대화
                 message = {

@@ -8,7 +8,6 @@ from sqlalchemy import and_, func
 from sqlalchemy.exc import NoResultFound, SQLAlchemyError
 from sqlalchemy.future import select
 from sqlalchemy.orm import aliased
-from src.config.database import redis
 
 from src.config.database.mongo import MongoDB
 from src.app.common.models.tag import Tag
