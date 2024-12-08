@@ -85,6 +85,20 @@ class TeacherProfileResponse(CommonProfileResponse):
     posts: List[PostResponse]
 
 
+class StudentAddProfileResponse(CommonProfileResponse):
+    school: str
+    grade: str
+    career_aspiration: str | None
+    interest: str | None
+    description: str | None
+    posts: List[PostResponse]
+
+class TeacherAddProfileResponse(CommonProfileResponse):
+    organization_name: str
+    organization_type: str
+    position: str
+    posts: List[PostResponse]
+
 class CurrentUser(BaseModel):
     access_token: str
     user_id: int

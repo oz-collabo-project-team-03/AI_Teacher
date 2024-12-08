@@ -57,7 +57,7 @@ from src.app.v1.user.schema.responseDto import (
     CommonProfileResponse,
     PostResponse,
     StudentProfileResponse,
-    TeacherProfileResponse,
+    TeacherProfileResponse, TeacherAddProfileResponse, StudentAddProfileResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -523,7 +523,7 @@ class UserService:
             if role == UserRole.STUDENT.value:
                 if not user.student:
                     raise HTTPException(status_code=404, detail="학생 정보를 찾을 수 없습니다.")
-                student_profile = StudentProfileResponse(
+                student_profile = StudentAddProfileResponse(
                     **common_data.dict(),
                     school=user.student.school,
                     grade=f"{user.student.grade}학년",
@@ -538,7 +538,7 @@ class UserService:
             elif role == UserRole.TEACHER.value:
                 if not user.teacher or not user.teacher.organization:
                     raise HTTPException(status_code=404, detail="교사 정보를 찾을 수 없습니다.")
-                teacher_profile = TeacherProfileResponse(
+                teacher_profile = TeacherAddProfileResponse(
                     **common_data.dict(),
                     organization_name=user.teacher.organization.name,
                     organization_type=user.teacher.organization.type,
