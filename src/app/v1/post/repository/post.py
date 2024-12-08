@@ -358,16 +358,10 @@ class PostRepository:
 
                 posts.append(post_data)
 
-            load_dotenv()
+            next_page = page + 1 if (page * PAGE_SIZE) < total_count else None
+            previous_page = page - 1 if page > 1 else None
 
-            host = os.getenv("HOST", "http://127.0.0.1:8000")
-            base_url = f"{host}/posts/me"
-
-            # 페이지네이션 정보
-            next_page = f"{base_url}?page={page + 1}"
-            previous_page = f"{base_url}?page={page - 1}" if page > 1 else None
-
-            return {"next": next_page, "previous": previous_page, "posts": posts}
+            return {"pagination": {"next": next_page, "previous": previous_page}, "posts": posts}
 
     @staticmethod
     async def get_user_posts(user_id: str, page: int):
@@ -461,12 +455,8 @@ class PostRepository:
 
                 posts.append(post_data)
 
-            load_dotenv()
-            host = os.getenv("HOST", "http://127.0.0.1:8000")
-            base_url = f"{host}/posts/me"
-
             # 페이지네이션 정보
-            next_page = f"{base_url}?page={page + 1}" if (page * PAGE_SIZE) < total_count else None
-            previous_page = f"{base_url}?page={page - 1}" if page > 1 else None
+            next_page = page + 1 if (page * PAGE_SIZE) < total_count else None
+            previous_page = page - 1 if page > 1 else None
 
-            return {"next": next_page, "previous": previous_page, "posts": posts}
+            return {"pagination": {"next": next_page, "previous": previous_page}, "posts": posts}
