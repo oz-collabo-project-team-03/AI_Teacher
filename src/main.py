@@ -38,6 +38,7 @@ load_dotenv()
 KAFKA_SERVER = os.environ.get("KAFKA_SERVER")
 CHAT_TOPIC = os.environ.get("CHAT_TOPIC")
 CONSUMER_GROUP = os.environ.get("CONSUMER_GROUP")
+KONG_HOST = os.environ.get("KONG_HOST")
 
 
 @asynccontextmanager
@@ -109,6 +110,7 @@ origins = [
     "http://localhost:8000",
     "http://sam-test.kprolabs.space:8000",
     "http://kong.kprolabs.space:8000",
+    # f"http://{KONG_HOST}",
     "http://front.suhaengssaem.bucket.s3-website.kr.object.ncloudstorage.com/",
 ]
 

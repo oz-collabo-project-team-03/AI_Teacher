@@ -1,3 +1,4 @@
+import json
 import logging
 from fastapi import (
     APIRouter,
@@ -9,13 +10,11 @@ from fastapi import (
 from src.app.common.utils.websocket_manager import manager
 from src.app.v1.chat.repository.chat_repository import ChatRepository
 from src.app.v1.chat.repository.room_repository import RoomRepository
-from src.app.v1.chat.service.chat import ChatService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Websocket"])
-chat_service = ChatService()
 
 
 # Websocket
@@ -48,16 +47,28 @@ async def websocket(
             await websocket.close(code=4004)
             return
 
-        await manager.connect(websocket, room, user_id, user_type)
+        await manager.connect(websocket, room, user_id)
 
         while True:
             data = await websocket.receive_text()
+            try:
+                message_data = json.loads(data)
+
+                # 메시지 타입과 내용 추출
+                message_type = message_data.get("message_type", "text")  # 기본값은 'text'
+                content = message_data.get("content", "")
+                filename = message_data.get("filename")  # 이미지인 경우 파일명
+
+                print(f"{message_type}, {content}, {filename}")
+
+            except json.JSONDecodeError:
+                # JSON이 아닌 경우 텍스트 메시지로 처리
+                message_type = "text"
+                content = data
+                filename = None
 
             # DB에서 최신 help_checked 상태 가져오기
             new_help_checked = await RoomRepository.get_help_checked_from_db(room_id)
-            print("=====================================================")
-            print(f"Websocket check {new_help_checked}")
-            print("=====================================================")
 
             # 상태가 변경된 경우만 업데이트
             if room.help_checked != new_help_checked:
@@ -68,7 +79,9 @@ async def websocket(
                 logger.warning("당신은 선생이라 메시지를 보낼 수 없습니다.")
                 continue
 
-            await manager.handle_message(room, user_id, user_type, data)
+            await manager.handle_message(
+                room=room, user_id=user_id, filename=filename, content=content, message_type=message_type, user_type=user_type
+            )
 
     except HTTPException as he:
         await websocket.close(code=4004)

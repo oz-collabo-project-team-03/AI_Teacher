@@ -2,6 +2,8 @@ import asyncio
 import json
 import logging
 import os
+import base64
+import boto3
 from openai import AsyncOpenAI
 from datetime import datetime
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
@@ -50,6 +52,67 @@ class ConnectionManager:
             "ai_start_menu": "시작할 메뉴를 입력해줘",
         }
 
+        # NCP Object Storage 설정
+        self.ncp_access_key = os.getenv("NCP_ACCESS_KEY")
+        self.ncp_secret_key = os.getenv("NCP_SECRET_KEY")
+        self.ncp_endpoint = os.getenv("NCP_ENDPOINT")
+        self.ncp_region = os.getenv("NCP_REGION", "kr-standard")
+        self.bucket_name = os.getenv("NCP_BUCKET_NAME")
+
+        # NCP Object Storage 클라이언트 초기화
+        self.s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=self.ncp_access_key,
+            aws_secret_access_key=self.ncp_secret_key,
+            endpoint_url=self.ncp_endpoint,
+            region_name=self.ncp_region,
+        )
+
+    async def upload_image_to_storage(self, content: str, room_id: int, original_filename: str) -> tuple[str, str]:
+        """
+        Base64 이미지를 NCP Object Storage에 업로드하고 URL과 저장된 파일명을 반환합니다.
+        """
+        try:
+            # 유효성 검사
+            if not content or not isinstance(content, str):
+                raise ValueError("Invalid image data: must be a non-empty string")
+            if not original_filename or not isinstance(original_filename, str):
+                raise ValueError("Invalid filename: must be a non-empty string")
+
+            # Base64 디코딩
+            image_bytes = base64.b64decode(content.split(",")[1] if "," in content else content)
+
+            # 파일 확장자 추출
+            file_extension = os.path.splitext(original_filename)[1].lower()
+            if not file_extension:
+                file_extension = ".jpg"  # 기본 확장자
+
+            # 파일명 생성 (타임스탬프와 원본 파일명 포함)
+            timestamp = datetime.now().isoformat()
+            stored_filename = f"{timestamp}_{original_filename}"
+            # 폴더 생성
+            file_path = f"chat_images/room_{room_id}/{stored_filename}"
+
+            # 이미지 업로드
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=file_path,
+                Body=image_bytes,
+                ContentType=f"image/{file_extension[1:]}" if file_extension != ".jpg" else "image/jpeg",
+                ACL="public-read",
+            )
+
+            # 이미지 URL 생성
+            image_url = f"{self.ncp_endpoint}/{self.bucket_name}/{file_path}"
+            return image_url, stored_filename
+
+        except ValueError as ve:
+            logger.error(f"Value error occurred: {ve}")
+            raise HTTPException(status_code=400, detail=str(ve))
+        except Exception as e:
+            logger.error(f"Failed to upload image: {e}")
+            raise HTTPException(status_code=500, detail="Failed to upload image")
+
     async def initialize(self, producer: AIOKafkaProducer, consumer: AIOKafkaConsumer):
         """Initialize the Kafka producer and consumer"""
         self.producer = producer
@@ -75,18 +138,20 @@ class ConnectionManager:
             "sender_id": user_id,
             "content": content,
             "message_type": "text",
+            "filename": "None",
             "user_type": user_type,
             "timestamp": datetime.now().isoformat(),
         }
         return message
 
-    async def send_system_message(self, room: Room, message_type: str):
+    async def send_system_message(self, room: Room, static_msg: str):
         message = {
             "room_id": room.id,
             "title": room.title,
             "sender_id": self.ai_user_id,
-            "content": self.system_messages.get(message_type, ""),
+            "content": self.system_messages.get(static_msg, ""),
             "message_type": "text",
+            "filename": "None",
             "user_type": "system",
             "timestamp": datetime.now().isoformat(),
         }
@@ -101,7 +166,7 @@ class ConnectionManager:
             await self.send_system_message(room, "teacher_goodbye")
             await self.send_system_message(room, "ai_welcome")
 
-    async def connect(self, websocket: WebSocket, room: Room, user_id: int, user_type: UserRole):
+    async def connect(self, websocket: WebSocket, room: Room, user_id: int):
         await websocket.accept()
 
         if room.id not in self.active_connections:
@@ -109,23 +174,51 @@ class ConnectionManager:
 
         self.active_connections[room.id][user_id] = websocket
 
-    async def handle_message(self, room: Room, user_id: int, user_type: str, content: str):
-        print("=====================================================")
-        print(f"handle check {room.help_checked}")
-        print("=====================================================")
-        message = {
-            "room_id": room.id,
-            "title": room.title,
-            "sender_id": user_id,
-            "content": content,
-            "message_type": "text",
-            "user_type": user_type,
-            "timestamp": datetime.now().isoformat(),
-        }
+    async def handle_message(self, room: Room, user_id: int, user_type: str, content: str, filename: str | None = None, message_type: str = "text"):
+        """
+        메시지 타입에 따라 처리를 다르게 합니다.
+
+        Args:
+            room: Room object
+            user_id: 사용자 ID
+            user_type: 사용자 타입
+            content: 메시지 내용 (이미지의 경우 base64 인코딩된 데이터)
+            message_type: 메시지 타입 ("text" 또는 "image")
+            filename: 파일명 (이미지 타입일 경우에만 사용)
+        """
         try:
-            if room.help_checked == False and user_type == "student" and user_id != None:
+            if message_type == "image":
+                # 이미지 업로드 및 URL 받기
+                image_url, stored_filename = await self.upload_image_to_storage(
+                    content, room.id, filename or f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                )
+
+                message = {
+                    "room_id": room.id,
+                    "title": room.title,
+                    "sender_id": user_id,
+                    "content": image_url,
+                    "message_type": "image",
+                    "filename": stored_filename,
+                    "user_type": user_type,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            else:
+                message = {
+                    "room_id": room.id,
+                    "title": room.title,
+                    "sender_id": user_id,
+                    "content": content,
+                    "message_type": "text",
+                    "filename": "None",
+                    "user_type": user_type,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            if not room.help_checked and user_type == "student" and user_id is not None:
                 await self.send_message(message)
-                await self.ai_chat(room, content)
+                # 텍스트 메시지인 경우에만 AI 응답 생성
+                if message_type == "text":
+                    await self.ai_chat(room, content)
             else:
                 # 선생과 학생 대화
                 await self.send_message(message)
@@ -197,6 +290,7 @@ class ConnectionManager:
                                 "sender_id": self.ai_user_id,
                                 "content": buffer,
                                 "message_type": "text",
+                                "filename": "None",
                                 "user_type": "ai",
                                 "timestamp": datetime.now().isoformat(),
                             }
@@ -211,6 +305,7 @@ class ConnectionManager:
                     "sender_id": self.ai_user_id,
                     "content": buffer,
                     "message_type": "text",
+                    "filename": "None",
                     "user_type": "ai",
                     "timestamp": datetime.now().isoformat(),
                 }
@@ -224,6 +319,7 @@ class ConnectionManager:
                 "sender_id": self.ai_user_id,
                 "content": "죄송합니다. 현재 AI 응답을 생성할 수 없습니다.",
                 "message_type": "text",
+                "filename": "None",
                 "user_type": "ai",
                 "timestamp": datetime.now().isoformat(),
             }
