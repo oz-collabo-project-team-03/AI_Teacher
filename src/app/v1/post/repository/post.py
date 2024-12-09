@@ -306,6 +306,7 @@ class PostRepository:
 
                 return {
                     "post_id": post.external_id,
+                    "like_count": post.like_count,
                     "user_id": int(user_id),
                     "liked": like is not None,
                 }
