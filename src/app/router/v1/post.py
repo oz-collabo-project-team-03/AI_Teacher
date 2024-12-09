@@ -98,6 +98,15 @@ async def like_post(
     return await post_service.like_post(user_id=user_info.get("user_id"), post_id=post_id, like=like_request.like)  # type: ignore
 
 
+@router.get("/{post_id}/like")
+async def get_like_post(
+    post_id: str,
+    post_service: PostService = Depends(PostService),
+    user_info: dict = Depends(get_current_user),
+):
+    return await post_service.get_like_post(user_id=user_info.get("user_id"), post_id=post_id)
+
+
 @router.get("/users/{user_id}")
 async def get_user_posts(
     user_id: str,
