@@ -13,6 +13,7 @@ class Message(Model):
     title: str
     sender_id: int
     message_type: MessageType
+    filename: str
     content: str
     user_type: str
     timestamp: datetime

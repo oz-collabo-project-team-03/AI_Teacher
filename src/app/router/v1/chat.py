@@ -10,7 +10,6 @@ from src.app.v1.chat.schema.room_response import (
     RoomHelpUpdateResponse,
     RoomListResponse,
 )
-from src.app.v1.chat.service import room_service
 from src.app.v1.chat.service.room_service import RoomService
 
 router = APIRouter(tags=["Chats"])

@@ -42,6 +42,7 @@ class PaginationResponse(BaseModel):
 class RoomMessageResponse(BaseModel):
     sender_id: int
     content: str
+    filename: str
     timestamp: datetime
     message_type: MessageType
     user_type: str
@@ -86,7 +87,12 @@ class RoomMessagesListResponse(BaseModel):
             teacher_nickname=teacher_nickname,
             messages=[
                 RoomMessageResponse(
-                    sender_id=msg.sender_id, content=msg.content, timestamp=msg.timestamp, message_type=msg.message_type, user_type=msg.user_type
+                    sender_id=msg.sender_id,
+                    content=msg.content,
+                    filename=msg.filename,
+                    timestamp=msg.timestamp,
+                    message_type=msg.message_type,
+                    user_type=msg.user_type,
                 )
                 for msg in messages
             ],
