@@ -233,6 +233,12 @@ class PostRepository:
 
                 await session.commit()
 
+                return {
+                    "post_id": post.external_id,
+                    "user_id": int(user_id),
+                    "liked": True,
+                }
+
             except HTTPException:
                 await session.rollback()
                 raise
@@ -267,6 +273,12 @@ class PostRepository:
                 post.like_count = max(0, post.like_count - 1)  # 음수 방지
 
                 await session.commit()
+
+                return {
+                    "post_id": post.external_id,
+                    "user_id": int(user_id),
+                    "liked": False,
+                }
 
             except HTTPException:
                 await session.rollback()
