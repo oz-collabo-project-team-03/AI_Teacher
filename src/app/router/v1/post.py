@@ -94,9 +94,8 @@ async def like_post(
     post_service: PostService = Depends(PostService),
     user_info: dict = Depends(get_current_user),
 ):
-    await post_service.like_post(user_id=user_info.get("user_id"), post_id=post_id, like=like_request.like)  # type: ignore
 
-    return Response(status_code=status.HTTP_200_OK)
+    return await post_service.like_post(user_id=user_info.get("user_id"), post_id=post_id, like=like_request.like)  # type: ignore
 
 
 @router.get("/users/{user_id}")
