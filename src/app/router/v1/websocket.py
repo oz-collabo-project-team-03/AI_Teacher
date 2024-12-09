@@ -51,6 +51,8 @@ async def websocket(
 
         while True:
             data = await websocket.receive_text()
+            message_data = json.loads(data)
+            print(f"{message_type}, {content}, {filename}")
             try:
                 message_data = json.loads(data)
 
