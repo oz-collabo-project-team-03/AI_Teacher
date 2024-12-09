@@ -9,7 +9,6 @@ class TokenResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     access_token: str
-    refresh_token: str  # 테스트 용
     token_type: str
     expires_in: int
     role: str

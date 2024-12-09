@@ -211,7 +211,6 @@ class OAuthService:
             "id": saved_user.id,
             "role": saved_user.role,
             "access_token": access_token,
-            "refresh_token": refresh_token,  # 테스트 용
             "token_type": "Bearer",
             "expires_in": 45 * 60,
             "first_login": first_login,
