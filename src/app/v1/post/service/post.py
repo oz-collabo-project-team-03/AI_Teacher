@@ -28,6 +28,9 @@ class PostService:
         if like == False:
             return self.post_repository.unlike_post(user_id, post_id)
 
+    def get_like_post(self, user_id: str, post_id: str):
+        return self.post_repository.get_like_post(user_id=user_id, post_id=post_id)
+
     def get_posts(self, page: int):
         return self.post_repository.get_posts(page=page)
 

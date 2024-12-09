@@ -288,6 +288,32 @@ class PostRepository:
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     @staticmethod
+    async def get_like_post(user_id: str, post_id: str):
+        async with SessionLocal() as session:
+            try:
+                # post 존재 여부 확인
+                post_query = select(Post).where(Post.external_id == post_id)
+                post_result = await session.execute(post_query)
+                post = post_result.scalar_one_or_none()
+
+                if not post:
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+                # 좋아요 여부 확인
+                like_query = select(PostLike).where(PostLike.user_id == int(user_id), PostLike.post_id == post.id)
+                like_result = await session.execute(like_query)
+                like = like_result.scalar_one_or_none()
+
+                return {
+                    "post_id": post.external_id,
+                    "user_id": int(user_id),
+                    "liked": like is not None,
+                }
+
+            except Exception as e:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    @staticmethod
     async def get_posts(page: int):
         PAGE_SIZE = 10
 
