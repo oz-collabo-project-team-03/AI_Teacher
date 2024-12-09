@@ -261,7 +261,6 @@ class UserService:
             return {
                 "id": user.id,
                 "access_token": access_token,
-                "refresh_token": refresh_token,  # 테스트 용
                 "token_type": "Bearer",
                 "expires_in": 45 * 60,
                 "role": role,
