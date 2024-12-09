@@ -81,12 +81,17 @@ class CommentService:
         """댓글 조회"""
         comments_with_tags = await self.comment_repository.get_comments_by_post_id(session, post_id)
 
+        # 댓글 작성자 ID를 수집하고 작성자 정보를 조회
         author_ids = {row.Comment.author_id for row in comments_with_tags}
-        user_info_map = {author_id: await self.comment_repository.get_user_info(session, author_id) for author_id in author_ids}
+        user_info_map = {
+            author_id: await self.comment_repository.get_user_info(session, author_id) for author_id in author_ids
+        }
 
+        # 부모 댓글과 자식 댓글 분리
         parent_comments = [row for row in comments_with_tags if row.Comment.parent_comment_id is None]
         child_comments = [row for row in comments_with_tags if row.Comment.parent_comment_id is not None]
 
+        # 부모 댓글을 기반으로 자식 댓글 연결
         parent_map = {row.Comment.id: row for row in parent_comments}
         for child_row in child_comments:
             parent_row = parent_map.get(child_row.Comment.parent_comment_id)
@@ -95,34 +100,32 @@ class CommentService:
                     parent_row.Comment.children = []
                 parent_row.Comment.children.append(child_row)
 
+        # 부모 댓글 변환 및 응답 생성
         return [
             self._convert_to_response(
                 row.Comment,
                 row.tags or [],
-                row.post_external_id,  # Post의 external_id를 응답에 포함
-                user_info_map[row.Comment.author_id]["id"],  # User의 실제 id 전달
-                user_info_map[row.Comment.author_id]["nickname"],  # Tag 모델의 nickname 반환
-                user_info_map[row.Comment.author_id]["profile_image"],
+                row.post_external_id,
+                user_info_map,
             )
             for row in parent_comments
         ]
 
     def _convert_to_response(
-        self,
-        comment: Comment,
-        tags: list[str],
-        post_external_id: str,
-        user_id: int,
-        author_nickname: str,
-        profile_image: str | None,
+            self,
+            comment: Comment,
+            tags: list[str],
+            post_external_id: str,
+            user_info_map: dict[int, dict],
     ) -> CommentResponse:
         """댓글 데이터 변환"""
+        author_info = user_info_map[comment.author_id]
         return CommentResponse(
             comment_id=comment.id,
-            post_id=post_external_id,  # post_external_id를 사용
-            user_id=user_id,
-            author_nickname=author_nickname,
-            profile_image=profile_image,
+            post_id=post_external_id,
+            user_id=author_info["id"],
+            author_nickname=author_info["nickname"],
+            profile_image=author_info["profile_image"],
             content=comment.content,
             created_at=comment.created_at,
             tags=[tag for tag in tags if tag is not None],
@@ -132,10 +135,8 @@ class CommentService:
                 self._convert_to_response(
                     child.Comment,
                     child.tags or [],
-                    post_external_id,  # 동일한 post_external_id를 자식에도 사용
-                    user_id,
-                    author_nickname,
-                    profile_image,
+                    post_external_id,
+                    user_info_map,
                 )
                 for child in getattr(comment, "children", [])
             ],
