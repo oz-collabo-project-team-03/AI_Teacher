@@ -1,0 +1,109 @@
+#name: FastAPI CD
+#
+#on:
+#  push:
+#    branches:
+#      - develop  # develop 브랜치에 푸시 시 CD 실행
+#
+#jobs:
+#  build-and-push:
+#    runs-on: ubuntu-latest  # Ubuntu 최신 환경 사용
+#
+#    steps:
+#    - name: Checkout code
+#      uses: actions/checkout@v4
+#
+#    - name: Set up Docker Buildx
+#      uses: docker/setup-buildx-action@v3
+#
+#    - name: Login to Docker Hub
+#      uses: docker/login-action@v3
+#      with:
+#        username: ${{ secrets.DOCKERHUB_USERNAME }}
+#        password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#    - name: Build and push Docker image
+#      uses: docker/build-push-action@v5
+#      with:
+#        context: .
+#        file: ./Dockerfile
+#        platforms: linux/amd64,linux/arm64
+#        push: true
+#        tags: |
+#          ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.ref_name }}-latest
+#        cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:buildcache
+#        cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:buildcache,mode=max
+#
+#  deploy-to-ncp:
+#    needs: build-and-push  # build-and-push 작업 완료 후 실행
+#    runs-on: ubuntu-latest  # Ubuntu 최신 환경 사용
+#
+#    steps:
+#    - name: Deploy to NCP via SSH
+#      # NCP 서버에 SSH를 통해 배포
+#      uses: appleboy/ssh-action@v0.1.6
+#      with:
+#        host: ${{ secrets.NCP_SERVER_HOST }}  # NCP 서버 IP 또는 도메인
+#        username: ubuntu  # SSH 사용자
+#        key: ${{ secrets.NCP_SSH_PRIVATE_KEY }}  # SSH 개인 키
+#        script: |
+#          set -e  # 에러 발생 시 중단
+#
+#          # 최신 Docker 이미지 가져오기
+#          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.ref_name }}-latest
+#
+#          # 기존 컨테이너 중단 및 삭제
+#          docker stop fastapi || true
+#          docker rm fastapi || true
+#
+#          # FastAPI 컨테이너 실행
+#          docker run --name fastapi -d -p 8000:8000 \
+#          -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
+#          -e SECURE_COOKIE=true \
+#          -e PG_DATABASE_URL=${{ secrets.PG_DATABASE_URL }} \
+#          -e REDIS_HOST=${{ secrets.REDIS_HOST }} \
+#          -e SMTP_USER=${{ secrets.SMTP_USER }} \
+#          -e SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }} \
+#          -e MAIL_TLS=true \
+#          -e MAIL_SSL=false \
+#          -e NCP_ACCESS_KEY=${{ secrets.NCP_ACCESS_KEY }} \
+#          -e NCP_SECRET_KEY=${{ secrets.NCP_SECRET_KEY }} \
+#          -e KAFKA_SERVER=${{ secrets.KAFKA_SERVER }} \
+#          -e CHAT_TOPIC=${{ secrets.CHAT_TOPIC }} \
+#          -e CONSUMER_GROUP=${{ secrets.CONSUMER_GROUP }} \
+#          -e AI_USER_ID=${{ secrets.AI_USER_ID }} \
+#          -e KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }} \
+#          -e KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }} \
+#          -e KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }} \
+#          -e GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
+#          -e GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
+#          -e GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }} \
+#          -e NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }} \
+#          -e NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }} \
+#          -e NAVER_REDIRECT_URI=${{ secrets.NAVER_REDIRECT_URI }} \
+#          -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+#          ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.ref_name }}-latest
+#
+#    - name: Verify FastAPI Health
+#      # FastAPI 헬스 체크
+#      uses: appleboy/ssh-action@v0.1.6
+#      with:
+#        host: ${{ secrets.NCP_SERVER_HOST }}
+#        username: ubuntu
+#        key: ${{ secrets.NCP_SSH_PRIVATE_KEY }}
+#        script: |
+#          # 환경에 따라 헬스 체크 URL 설정
+#          if [[ "${{ secrets.ENVIRONMENT }}" == "local" ]]; then
+#            HEALTH_URL="http://localhost:8000/health"
+#          elif [[ "${{ secrets.ENVIRONMENT }}" == "test" ]]; then
+#            HEALTH_URL="http://sam-test.kprolabs.space:8000/health"
+#          elif [[ "${{ secrets.ENVIRONMENT }}" == "production" ]]; then
+#            HEALTH_URL="http://sam.kprolabs.space:8000/health"
+#          else
+#            echo "Unknown environment: ${{ secrets.ENVIRONMENT }}"
+#            exit 1
+#          fi
+#
+#          # 헬스 체크 수행
+#          echo "Performing health check on $HEALTH_URL"
+#          curl -f $HEALTH_URL || exit 1

@@ -1,136 +1,54 @@
-# .github/workflows/CI.yml
-
 name: FastAPI CI
 
-# 트리거 이벤트 부분으로 코드가 푸시되거나 풀 리퀘스트가 생성될 때 CI가 실행됩니다.
+# 트리거 이벤트: Pull Request 생성 시 실행
 on:
   pull_request:
     branches:
-        - develop
+      - develop
 
 jobs:
   ci:
+    # Ubuntu 최신 환경에서 실행
     runs-on: ubuntu-latest
 
-    env:
-      DB_USER: ${{ secrets.DB_USER }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      DB_NAME: ${{ secrets.DB_NAME }}
-
-    services:
-      postgres:
-        image: postgres:latest
-        ports:
-          - 5432:5432
-        env:
-          POSTGRES_USER: ${{ env.DB_USER }}
-          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
-          POSTGRES_DB: ${{ env.DB_NAME }}
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:latest
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
+    # CI 단계 정의
     steps:
-    - name: Verify PostgreSQL connection
-      run: |
-        sudo apt-get install -y postgresql-client
-        PGPASSWORD=${{ env.DB_PASSWORD }} psql -h localhost -U ${{ env.DB_USER }} -d ${{ env.DB_NAME }} -c "SELECT 1;"
-
-    - name: Verify Redis connection
-      run: |
-        sudo apt-get install -y redis-tools
-        redis-cli ping
-
-    # 코드 체크아웃: 리포지토리의 코드를 가져옵니다.
     - name: Checkout code
+      # 코드 체크아웃
       uses: actions/checkout@v4
 
-    # CI 환경에서 사용할 파이썬 버젼을 지정합니다.
     - name: Set up Python
+      # Python 환경 설정
       uses: actions/setup-python@v5
       with:
         python-version: '3.12.7'
 
-    # Poetry 설치: Poetry를 설치하여 패키지 관리를 준비합니다.
     - name: Install Poetry
+      # Poetry 설치
       run: |
         curl -sSL https://install.python-poetry.org | python3 -
         echo "${HOME}/.local/bin" >> $GITHUB_PATH
 
-    - name: Check poetry.lock consistency
-      run: poetry lock --no-update
-
-    # Poetry를 사용하여 의존성 패키지들을 설치합니다.
-    - name: Install Packages & Libraries
+    - name: Install Dependencies
+      # 종속성 설치
       run: poetry install --no-interaction --no-root
 
-    # isort를 사용하여 import 구문의 정렬 순서를 체크합니다.
-    - name: Run isort (Import sorting)
+    - name: Run isort (Import Sorting)
+      # isort로 Import 정렬 검사
       run: |
-        poetry run isort .
+        poetry run isort . 
 
-    # black을 사용하여 PEP8 코드스타일을 준수했는지 체크합니다.
-    - name: Run black (Code formatting)
+    - name: Run black (Code Formatting)
+      # black으로 코드 스타일 검사
       run: |
         poetry run black .
 
-#    # flake8 검사: 코드에서 일반적인 코드 스타일 문제를 검사합니다.
-#    - name: Run flake8
-#      run: poetry run flake8 .
-
-    # mypy 검사: 코드 타입 검사를 수행합니다.
-#    - name: Run mypy
-#      run: poetry run mypy . --no-incremental
-
-#    # pylint 검사: 코드의 코드 품질을 점검합니다.
-#    - name: Run pylint
-#      run: poetry run pylint **/*.py
-
-    # PostgreSQL이 준비될 때까지 대기: PostgreSQL의 준비 상태를 확인합니다.
-    - name: Wait for PostgreSQL to be ready
+    - name: Run mypy (Type Checking)
+      # mypy로 타입 검사
       run: |
-        until pg_isready -h localhost -p 5432 -U ${{ env.DB_USER }}; do
-          echo "Waiting for PostgreSQL..."
-          sleep 2
-        done
+        poetry run mypy .
+      env:
+        PG_DATABASE_URL: ${{ secrets.PG_DATABASE_URL }}
+        REDIS_HOST: ${{ secrets.REDIS_HOST }}
 
-    # Redis가 준비될 때까지 대기: Redis의 준비 상태를 확인합니다.
-    - name: Wait for Redis to be ready
-      run: |
-        until redis-cli -h localhost ping; do
-          echo "Waiting for Redis..."
-          sleep 2
-        done
 
-#pytest랑 커버리지는 나중에 생성 후 주석해제
-
-    # pytest 실행: PostgreSQL과 Redis에 대한 테스트 및 커버리지 리포트를 생성합니다.
-#    - name: Run pytest
-#      run: |
-#        poetry run pytest tests/ --doctest-modules --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html
-#      env:
-#        PG_DATABASE_URL: "postgresql+asyncpg://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@.0.0.0.0:5432/${{ secrets.DB_NAME }}"
-#        REDIS_URL: "redis://localhost:6379"
-#        DB_HOST: 0.0.0.0
-#        DB_PORT: 5432
-#        DB_USER: ${{ secrets.DB_USER }}
-#        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-#        DB_NAME: ${{ secrets.DB_NAME }}
-
-    # Codecov에 커버리지 리포트 업로드: 테스트 커버리지 결과를 Codecov에 업로드합니다.
-#    - name: Upload coverage reports to Codecov
-#      uses: codecov/codecov-action@v3
-#      with:
-#        token: ${{ secrets.CODECOV_T

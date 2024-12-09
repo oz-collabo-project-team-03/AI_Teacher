@@ -112,7 +112,7 @@ class CommentService:
         comment: Comment,
         tags: list[str],
         post_external_id: str,
-        user_id: str,
+        user_id: int,
         author_nickname: str,
         profile_image: str | None,
     ) -> CommentResponse:
