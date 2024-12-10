@@ -77,23 +77,25 @@ async def lifespan(app: FastAPI):
     await consumer.stop()  # type: ignore
 
 
-health_router = APIRouter(prefix="/api/v1", tags=["Health"])
+main_router = APIRouter(prefix="/api/v1")
 
 
-@health_router.get("/health")
+# 각 라우터를 메인 라우터에 포함
+main_router.include_router(post_router)
+main_router.include_router(auth_router)
+main_router.include_router(chat_router)
+main_router.include_router(comment_router)
+main_router.include_router(user_router)
+main_router.include_router(websocket_router)
+
+
+@main_router.get("/health")
 async def health_check():
     return {"status": "ok"}
 
 
 app = FastAPI(debug=True, lifespan=lifespan)
-
-app.include_router(post_router)
-app.include_router(auth_router)
-app.include_router(chat_router)
-app.include_router(comment_router)
-app.include_router(user_router)
-app.include_router(websocket_router)
-app.include_router(health_router)
+app.include_router(main_router)
 
 
 @app.middleware("http")
