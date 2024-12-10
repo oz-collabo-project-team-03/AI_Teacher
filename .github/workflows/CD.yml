@@ -59,37 +59,42 @@ jobs:
          docker stop sam 2>/dev/null || true
          docker rm sam 2>/dev/null || true
 
+         cat << EOF > .env
+         SECRET_KEY=${{ secrets.SECRET_KEY }} \
+         SECURE_COOKIE=true \
+         PG_DATABASE_URL=${{ secrets.PG_DATABASE_URL }} \
+         REDIS_HOST=${{ secrets.REDIS_HOST }} \
+         SMTP_USER=${{ secrets.SMTP_USER }} \
+         SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }} \
+         MAIL_TLS=true \
+         MAIL_SSL=false \
+         NCP_ACCESS_KEY=${{ secrets.NCP_ACCESS_KEY }} \
+         NCP_SECRET_KEY=${{ secrets.NCP_SECRET_KEY }} \
+         NCP_ENDPOINT=${{ secrets.NCP_ENDPOINT }} \
+         NCP_REGION=${{ secrets.NCP_REGION }} \
+         NCP_BUCKET_NAME=${{ secrets.NCP_BUCKET_NAME }} \
+         MONGO_URL=${{ secrets.MONGO_URL }} \
+         MONGO_DB_NAME=${{ secrets.MONGO_DB_NAME }} \
+         MONGO_MAX_CONNECTIONS=${{ secrets.MONGO_MAX_CONNECTIONS }} \
+         MONGO_MIN_CONNECTIONS=${{ secrets.MONGO_MIN_CONNECTIONS }} \
+         KAFKA_SERVER=${{ secrets.KAFKA_SERVER }} \
+         CHAT_TOPIC=${{ secrets.CHAT_TOPIC }} \
+         CONSUMER_GROUP=${{ secrets.CONSUMER_GROUP }} \
+         AI_USER_ID=${{ secrets.AI_USER_ID }} \
+         KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }} \
+         KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }} \
+         KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }} \
+         GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
+         GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
+         GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }} \
+         NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }} \
+         NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }} \
+         NAVER_REDIRECT_URI=${{ secrets.NAVER_REDIRECT_URI }} \
+         OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+         EOF
+
          # FastAPI 컨테이너 실행
-         docker run --name sam -d -p 8000:8000 \
-         -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
-         -e SECURE_COOKIE=true \
-         -e PG_DATABASE_URL=${{ secrets.PG_DATABASE_URL }} \
-         -e REDIS_HOST=${{ secrets.REDIS_HOST }} \
-         -e SMTP_USER=${{ secrets.SMTP_USER }} \
-         -e SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }} \
-         -e MAIL_TLS=true \
-         -e MAIL_SSL=false \
-         -e NCP_ACCESS_KEY=${{ secrets.NCP_ACCESS_KEY }} \
-         -e NCP_SECRET_KEY=${{ secrets.NCP_SECRET_KEY }} \
-         -e NCP_ENDPOINT=${{ secrets.NCP_ENDPOINT }} \
-         -e NCP_REGION=${{ secrets.NCP_REGION }} \
-         -e NCP_BUCKET_NAME=${{ secrets.NCP_BUCKET_NAME }} \
-         -e MONGO_URL=${{ secrets.MONGO_URL }} \
-         -e MONGO_DB_NAME=${{ secrets.MONGO_DB_NAME }} \
-         -e MONGO_MAX_CONNECTIONS=${{ secrets.MONGO_MAX_CONNECTIONS }} \
-         -e MONGO_MIN_CONNECTIONS=${{ secrets.MONGO_MIN_CONNECTIONS }} \
-         -e KAFKA_SERVER=${{ secrets.KAFKA_SERVER }} \
-         -e CHAT_TOPIC=${{ secrets.CHAT_TOPIC }} \
-         -e CONSUMER_GROUP=${{ secrets.CONSUMER_GROUP }} \
-         -e AI_USER_ID=${{ secrets.AI_USER_ID }} \
-         -e KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }} \
-         -e KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }} \
-         -e KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }} \
-         -e GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
-         -e GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
-         -e GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }} \
-         -e NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }} \
-         -e NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }} \
-         -e NAVER_REDIRECT_URI=${{ secrets.NAVER_REDIRECT_URI }} \
-         -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
-         $IMAGE
+         docker run --name sam -d \
+           --env-file .env \
+           -p 8000:8000 \
+           $IMAGE
