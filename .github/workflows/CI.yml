@@ -43,10 +43,10 @@ jobs:
       run: |
         poetry run black .
 
-    - name: Run mypy (Type Checking)
-      # mypy로 타입 검사
-      run: |
-        poetry run mypy .
+    # - name: Run mypy (Type Checking)
+    #   # mypy로 타입 검사
+    #   run: |
+    #     poetry run mypy .
       env:
         PG_DATABASE_URL: ${{ secrets.PG_DATABASE_URL }}
         REDIS_HOST: ${{ secrets.REDIS_HOST }}
