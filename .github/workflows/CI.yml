@@ -47,8 +47,8 @@ jobs:
     #   # mypy로 타입 검사
     #   run: |
     #     poetry run mypy .
-      env:
-        PG_DATABASE_URL: ${{ secrets.PG_DATABASE_URL }}
-        REDIS_HOST: ${{ secrets.REDIS_HOST }}
+      # env:
+      #   PG_DATABASE_URL: ${{ secrets.PG_DATABASE_URL }}
+      #   REDIS_HOST: ${{ secrets.REDIS_HOST }}
 
 
