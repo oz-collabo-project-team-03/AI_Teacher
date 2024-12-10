@@ -57,7 +57,7 @@ jobs:
          docker rm sam || true
 
          # FastAPI 컨테이너 실행
-         docker run --name fastapi -d -p 8000:8000 \
+         docker run --name sam -d -p 8000:8000 \
          -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
          -e SECURE_COOKIE=true \
          -e PG_DATABASE_URL=${{ secrets.PG_DATABASE_URL }} \
