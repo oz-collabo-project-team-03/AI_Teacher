@@ -49,12 +49,15 @@ jobs:
        script: |
          set -e  # 에러 발생 시 중단
 
+         # 이미지 이름을 변수로 저장
+         IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.ref_name }}-latest"
+          
          # 최신 Docker 이미지 가져오기
-         docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.ref_name }}-latest
+         docker pull $IMAGE
 
          # 기존 컨테이너 중단 및 삭제
-         docker stop sam || true
-         docker rm sam || true
+         docker stop sam 2>/dev/null || true
+         docker rm sam 2>/dev/null || true
 
          # FastAPI 컨테이너 실행
          docker run --name sam -d -p 8000:8000 \
@@ -89,4 +92,4 @@ jobs:
          -e NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }} \
          -e NAVER_REDIRECT_URI=${{ secrets.NAVER_REDIRECT_URI }} \
          -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
-         ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.ref_name }}-latest
+         $IMAGE
