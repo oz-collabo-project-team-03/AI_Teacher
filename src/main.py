@@ -111,6 +111,8 @@ origins = [
     "https://localhost:5173",
     "http://localhost:8000",
     "http://sam-test.kprolabs.space:8000",
+    "http://sam.kprolabs.space",
+    "https://sam.kprolabs.space",
     "http://kong.kprolabs.space:8000",
     f"http://{KONG_HOST}",
     "http://front.suhaengssaem.bucket.s3-website.kr.object.ncloudstorage.com/",
