@@ -53,8 +53,8 @@ jobs:
          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ github.ref_name }}-latest
 
          # 기존 컨테이너 중단 및 삭제
-         docker stop fastapi || true
-         docker rm fastapi || true
+         docker stop sam || true
+         docker rm sam || true
 
          # FastAPI 컨테이너 실행
          docker run --name fastapi -d -p 8000:8000 \
