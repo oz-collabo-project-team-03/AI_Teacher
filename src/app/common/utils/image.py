@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import boto3
 from dotenv import load_dotenv
-from fastapi import HTTPException, UploadFile
+from fastapi import UploadFile
 
 load_dotenv()
 
@@ -75,5 +75,3 @@ class NCPStorageService:
                 uploaded_urls.append(None)
 
         return uploaded_urls
-
-
