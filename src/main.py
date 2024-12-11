@@ -38,7 +38,6 @@ load_dotenv()
 KAFKA_SERVER = os.environ.get("KAFKA_SERVER")
 CHAT_TOPIC = os.environ.get("CHAT_TOPIC")
 CONSUMER_GROUP = os.environ.get("CONSUMER_GROUP")
-KONG_HOST = os.environ.get("KONG_HOST")
 
 
 @asynccontextmanager
