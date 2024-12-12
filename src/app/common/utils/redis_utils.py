@@ -25,12 +25,12 @@ async def save_to_redis(key: str, value: str, expiry: int):
 
 
 async def get_from_redis(key: str) -> str | None:
-    return await redis_client.get(key)
-    # try:
-    #     return await redis_client.get(key)
-    # except Exception as e:
-    #     logger.error(f"Redis 조회 오류 (Key: {key}): {e}")
-    #     raise HTTPException(status_code=500, detail=f"Redis 조회 오류: {str(e)}")
+    # return await redis_client.get(key)
+    try:
+        return await redis_client.get(key)
+    except Exception as e:
+        logger.error(f"Redis 조회 오류 (Key: {key}): {e}")
+        raise HTTPException(status_code=500, detail=f"Redis 조회 오류: {str(e)}")
 
 
 async def delete_from_redis(key: str):

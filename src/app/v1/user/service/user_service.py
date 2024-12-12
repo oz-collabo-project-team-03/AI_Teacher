@@ -226,34 +226,65 @@ class UserService:
 
             role = str(user.role) if not isinstance(user.role, str) else user.role
 
-            # Redis에서 refresh token 확인
-            redis_refresh_token = await get_from_redis(get_redis_key_refresh_token(user.id))
+            # Redis에서 refresh token 확인 시도
+            try:
+                redis_refresh_token = await get_from_redis(get_redis_key_refresh_token(user.id))
+            except Exception as e:
+                logger.error(f"Redis 조회 실패: {e}")
+                redis_refresh_token = None
 
+            # 새로운 JTI 생성 (항상 필요)
+            jti = str(uuid.uuid4())
+            
             if redis_refresh_token is None:
-                # Redis에 토큰이 없으면 새로 생성
-                jti = str(uuid.uuid4())
-                access_token = create_access_token({"sub": str(user.id), "role": role, "jti": jti}, expires_delta=timedelta(minutes=45))
-                refresh_token = create_refresh_token({"sub": str(user.id)}, expires_delta=timedelta(days=7))
-
-                expiry = 15 * 60
-                await save_to_redis(get_redis_key_jti(jti), "used", expiry)
-                await save_to_redis(get_redis_key_refresh_token(user.id), refresh_token, expiry=7 * 24 * 3600)
-            else:
-                # 기존 토큰이 있으면 그대로 사용
-                refresh_token = redis_refresh_token
-                # access token 재발급
-                jti = str(uuid.uuid4())
-                access_token = create_access_token({"sub": str(user.id), "role": role, "jti": jti}, expires_delta=timedelta(minutes=45))
-                await save_to_redis(get_redis_key_jti(jti), "used", 15 * 60)
-
-                response.set_cookie(
-                    key="refresh_token",
-                    value=refresh_token,
-                    httponly=True,  # 클라이언트 측 JavaScript에서 쿠키에 접근하지 못하도록 제한 ->XSS공격으로부터 보호하기 위해
-                    secure=SECURE_COOKIE,  # 배포 시에는 True 로 전환 ->  HTTPS 연결에서만 쿠키를 전송하도록 제한
-                    samesite="Strict",  # type: ignore # CSRF(Cross-Site Request Forgery) 공격을 방지
-                    max_age=REFRESH_TOKEN_TTL,
+                # Redis에 토큰이 없거나 조회 실패한 경우 새로 생성
+                logger.info(f"사용자 {user.id}의 새로운 refresh token 생성")
+                access_token = create_access_token(
+                    {"sub": str(user.id), "role": role, "jti": jti}, 
+                    expires_delta=timedelta(minutes=45)
                 )
+                refresh_token = create_refresh_token(
+                    {"sub": str(user.id)}, 
+                    expires_delta=timedelta(days=7)
+                )
+
+                # Redis 저장 시도
+                try:
+                    expiry = 15 * 60
+                    await save_to_redis(get_redis_key_jti(jti), "used", expiry)
+                    await save_to_redis(
+                        get_redis_key_refresh_token(user.id), 
+                        refresh_token, 
+                        expiry=7 * 24 * 3600
+                    )
+                except Exception as e:
+                    logger.error(f"Redis 저장 실패: {e}")
+                    # 저장 실패해도 계속 진행
+            else:
+                # 기존 토큰이 있으면 재사용
+                logger.info(f"사용자 {user.id}의 기존 refresh token 재사용")
+                refresh_token = redis_refresh_token
+                # access token만 재발급
+                access_token = create_access_token(
+                    {"sub": str(user.id), "role": role, "jti": jti}, 
+                    expires_delta=timedelta(minutes=45)
+                )
+                
+                # JTI만 Redis에 저장 시도
+                try:
+                    await save_to_redis(get_redis_key_jti(jti), "used", 15 * 60)
+                except Exception as e:
+                    logger.error(f"Redis JTI 저장 실패: {e}")
+                    # 저장 실패해도 계속 진행
+
+            response.set_cookie(
+                key="refresh_token",
+                value=refresh_token,
+                httponly=True,  # 클라이언트 측 JavaScript에서 쿠키에 접근하지 못하도록 제한 ->XSS공격으로부터 보호하기 위해
+                secure=SECURE_COOKIE,  # 배포 시에는 True 로 전환 ->  HTTPS 연결에서만 쿠키를 전송하도록 제한
+                samesite="Strict",  # type: ignore # CSRF(Cross-Site Request Forgery) 공격을 방지
+                max_age=REFRESH_TOKEN_TTL,
+            )
 
             first_login = user.first_login
             if user.first_login:
