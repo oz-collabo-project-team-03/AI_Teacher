@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import os
 import sys
@@ -88,11 +87,6 @@ main_router.include_router(user_router)
 main_router.include_router(websocket_router)
 
 
-@main_router.get("/health")
-async def health_check():
-    return {"status": "ok"}
-
-
 app = FastAPI(debug=True, lifespan=lifespan)
 app.include_router(main_router)
 
@@ -106,11 +100,8 @@ async def cors_debugging(request: Request, call_next):
 
 
 origins = [
-    "http://localhost:5173",
-    "http://sam-test.kprolabs.space:8000",
     "http://sam.kprolabs.space",
     "https://sam.kprolabs.space",
-    "http://kong.kprolabs.space:8000",
     "http://front.suhaengssaem.bucket.s3-website.kr.object.ncloudstorage.com/",
 ]
 
@@ -127,7 +118,6 @@ app.add_middleware(
 
 
 if __name__ == "__main__":
-    # asyncio.run(main())
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)

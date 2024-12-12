@@ -20,7 +20,7 @@ if DATABASE_URL is None:
 
 engine = create_async_engine(
     DATABASE_URL,
-    echo=True,
+    # echo=True, # Develop Debug Moode
     connect_args={"server_settings": {"timezone": "Asia/Seoul"}},
 )
 
