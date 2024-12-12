@@ -68,17 +68,21 @@ jobs:
       id: version
       run: |
         if [[ $GITHUB_REF == refs/tags/* ]]; then
+          # For releases
           VERSION=${GITHUB_REF#refs/tags/}
-          TAG=$VERSION
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:$VERSION" >> $GITHUB_OUTPUT
         elif [[ $GITHUB_REF == refs/heads/main ]]; then
-          VERSION=main-$(date +%Y%m%d)-$(git rev-parse --short HEAD)
-          TAG=$VERSION
+          # For main branch
+          VERSION=main-$(date +%Y%m%d)-${GITHUB_SHA::7}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:$VERSION" >> $GITHUB_OUTPUT
         else
-          VERSION=dev-$(date +%Y%m%d)-$(git rev-parse --short HEAD)
-          TAG=$VERSION
+          # For develop branch
+          VERSION=dev-$(date +%Y%m%d)-${GITHUB_SHA::7}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:$VERSION" >> $GITHUB_OUTPUT
         fi
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "tag=$TAG" >> $GITHUB_OUTPUT
 
     - name: Deploy to NCP via SSH
       uses: appleboy/ssh-action@v0.1.6
@@ -90,7 +94,7 @@ jobs:
           set -e
           
           # 이미지 태그 설정
-          IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ steps.version.outputs.tag }}"
+          IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ steps.version.outputs.version }}"
            
           # 최신 Docker 이미지 가져오기
           docker pull $IMAGE
