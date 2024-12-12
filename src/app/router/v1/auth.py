@@ -1,22 +1,12 @@
 import logging
 from typing import Union
 
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Depends,
-    Header,
-    HTTPException,
-    Path,
-    Query,
-    Response,
-)
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Path, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.app.common.utils.consts import SocialProvider, UserRole
+from src.app.common.utils.consts import UserRole
 from src.app.common.utils.dependency import get_current_user, get_session
-from src.app.common.utils.image import NCPStorageService  # type: ignore
+from src.app.common.utils.image import NCPStorageService
 
 from src.app.v1.auth.repository.oauth_repository import OAuthRepository
 from src.app.v1.auth.schema.requestDto import SocialLoginStudentRequest, SocialLoginTeacherRequest, OAuthRequest
@@ -42,10 +32,8 @@ from src.app.v1.user.schema.responseDto import (
     TeachersResponse,
     TempPasswordResponse,
     TokenResponse,
-    UserInfoResponse,
 )
 from src.app.v1.user.service.user_service import UserService
-from fastapi.responses import RedirectResponse
 
 
 logger = logging.getLogger(__name__)
@@ -175,6 +163,7 @@ async def create_study_group(
         teacher_name=study_group.name,
     )
 
+
 # 로그인 엔드포인트 - 테스트
 # @router.get("/login/{provider}")
 # async def login(provider: str):
@@ -182,13 +171,14 @@ async def create_study_group(
 #     print(f"Generated OAuth URL: {oauth_url}")
 #     return RedirectResponse(oauth_url)
 
+
 # Callback 엔드포인트
 @router.post("/login/callback/{provider}")
 async def social_login_callback(
-        response: Response,
-        body: OAuthRequest,
-        provider: str = Path(...),
-        session: AsyncSession = Depends(get_session),
+    response: Response,
+    body: OAuthRequest,
+    provider: str = Path(...),
+    session: AsyncSession = Depends(get_session),
 ):
     code = body.code
 
@@ -199,6 +189,7 @@ async def social_login_callback(
     result = await oauth_service.login_social_user(saved_user, response)
 
     return result
+
 
 @router.patch("/social/info/student", response_model=StudentRoleResponse)
 async def additional_student_info(

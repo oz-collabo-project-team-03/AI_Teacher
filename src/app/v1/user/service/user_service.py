@@ -57,7 +57,9 @@ from src.app.v1.user.schema.responseDto import (
     CommonProfileResponse,
     PostResponse,
     StudentProfileResponse,
-    TeacherProfileResponse, TeacherAddProfileResponse, StudentAddProfileResponse,
+    TeacherProfileResponse,
+    TeacherAddProfileResponse,
+    StudentAddProfileResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -72,7 +74,6 @@ class UserService:
     def __init__(self, user_repo: UserRepository, storage_service: NCPStorageService):
         self.user_repo = user_repo
         self.storage_service = storage_service
-
 
     @staticmethod
     def _validate_email_format(email: str) -> bool:
@@ -214,9 +215,7 @@ class UserService:
     async def login_user(self, email: str, password: str, response: Response, session: AsyncSession):
         try:
             user = await self.user_repo.get_user_by_email(session, email)
-            print(f"조회된 사용자: {user}")
             if user is None:
-                print("404 에러: 등록되지 않은 이메일")
                 raise HTTPException(status_code=404, detail="등록되지 않은 이메일입니다.")
             # 비활성화된 사용자 체크
             if user.deactivated_at:
@@ -227,24 +226,35 @@ class UserService:
 
             role = str(user.role) if not isinstance(user.role, str) else user.role
 
-            jti = str(uuid.uuid4())
-            access_token = create_access_token(
-                {"sub": str(user.id), "role": role, "jti": jti}, expires_delta=timedelta(minutes=45)  # 문자열로 변환된 role 사용
-            )
-            refresh_token = create_refresh_token({"sub": str(user.id)}, expires_delta=timedelta(days=7))
+            # Redis에서 refresh token 확인
+            redis_refresh_token = await get_from_redis(get_redis_key_refresh_token(user.id))
 
-            expiry = 15 * 60
-            await save_to_redis(get_redis_key_jti(jti), "used", expiry)
-            await save_to_redis(get_redis_key_refresh_token(user.id), refresh_token, expiry=7 * 24 * 3600)
+            if redis_refresh_token is None:
+                # Redis에 토큰이 없으면 새로 생성
+                jti = str(uuid.uuid4())
+                access_token = create_access_token({"sub": str(user.id), "role": role, "jti": jti}, expires_delta=timedelta(minutes=45))
+                refresh_token = create_refresh_token({"sub": str(user.id)}, expires_delta=timedelta(days=7))
 
-            response.set_cookie(
-                key="refresh_token",
-                value=refresh_token,
-                httponly=True,  # 클라이언트 측 JavaScript에서 쿠키에 접근하지 못하도록 제한 ->XSS공격으로부터 보호하기 위해
-                secure=SECURE_COOKIE,  # 배포 시에는 True 로 전환 ->  HTTPS 연결에서만 쿠키를 전송하도록 제한
-                samesite="Strict",  # type: ignore # CSRF(Cross-Site Request Forgery) 공격을 방지
-                max_age=REFRESH_TOKEN_TTL,
-            )
+                expiry = 15 * 60
+                await save_to_redis(get_redis_key_jti(jti), "used", expiry)
+                await save_to_redis(get_redis_key_refresh_token(user.id), refresh_token, expiry=7 * 24 * 3600)
+            else:
+                # 기존 토큰이 있으면 그대로 사용
+                refresh_token = redis_refresh_token
+                # access token 재발급
+                jti = str(uuid.uuid4())
+                access_token = create_access_token({"sub": str(user.id), "role": role, "jti": jti}, expires_delta=timedelta(minutes=45))
+                await save_to_redis(get_redis_key_jti(jti), "used", 15 * 60)
+
+                response.set_cookie(
+                    key="refresh_token",
+                    value=refresh_token,
+                    httponly=True,  # 클라이언트 측 JavaScript에서 쿠키에 접근하지 못하도록 제한 ->XSS공격으로부터 보호하기 위해
+                    secure=SECURE_COOKIE,  # 배포 시에는 True 로 전환 ->  HTTPS 연결에서만 쿠키를 전송하도록 제한
+                    samesite="Strict",  # type: ignore # CSRF(Cross-Site Request Forgery) 공격을 방지
+                    max_age=REFRESH_TOKEN_TTL,
+                )
+
             first_login = user.first_login
             if user.first_login:
                 user.first_login = False
@@ -255,9 +265,8 @@ class UserService:
             if role == "student":
                 if not user.student or not user.student.id:
                     raise ValueError("Student 객체가 사용자와 연결되지 않았습니다.")
-                is_connected_to_group = await self.user_repo.is_student_connected_to_group(
-                    user.student.id, session
-                )
+                is_connected_to_group = await self.user_repo.is_student_connected_to_group(user.student.id, session)
+
             return {
                 "id": user.id,
                 "access_token": access_token,
@@ -505,10 +514,10 @@ class UserService:
                 for post_datas in posts.values()
             ]
             # like_count와 comment_count 계산
-            like_count = sum(post_data['post'].like_count for post_data in posts.values())  # 'post' 객체에서 like_count 접근
-            comment_count = sum(post_data['post'].comment_count for post_data in posts.values())  # 'post' 객체에서 comment_count 접근
+            like_count = sum(post_data["post"].like_count for post_data in posts.values())  # 'post' 객체에서 like_count 접근
+            comment_count = sum(post_data["post"].comment_count for post_data in posts.values())  # 'post' 객체에서 comment_count 접근
 
-            role=user.role
+            role = user.role
             common_data = CommonProfileResponse(
                 role=role,
                 id=user.id,
@@ -599,9 +608,7 @@ class UserService:
         if role == UserRole.STUDENT.value:
             if not user.student:
                 raise HTTPException(status_code=404, detail="학생 정보를 찾을 수 없습니다.")
-            is_connected_to_group = await self.user_repo.is_student_connected_to_group(
-                user.student.id, session
-            )
+            is_connected_to_group = await self.user_repo.is_student_connected_to_group(user.student.id, session)
 
         # 학생 프로필 생성
         if role == UserRole.STUDENT.value:
