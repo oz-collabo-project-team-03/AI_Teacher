@@ -25,11 +25,12 @@ async def save_to_redis(key: str, value: str, expiry: int):
 
 
 async def get_from_redis(key: str) -> str | None:
-    try:
-        return await redis_client.get(key)
-    except Exception as e:
-        logger.error(f"Redis 조회 오류 (Key: {key}): {e}")
-        raise HTTPException(status_code=500, detail=f"Redis 조회 오류: {str(e)}")
+    return await redis_client.get(key)
+    # try:
+    #     return await redis_client.get(key)
+    # except Exception as e:
+    #     logger.error(f"Redis 조회 오류 (Key: {key}): {e}")
+    #     raise HTTPException(status_code=500, detail=f"Redis 조회 오류: {str(e)}")
 
 
 async def delete_from_redis(key: str):
@@ -55,5 +56,3 @@ async def mark_jti_used(jti: str, expiry: int):
     except Exception as e:
         logger.error(f"JTI 사용 마크 오류 (JTI: {jti}): {e}")
         raise HTTPException(status_code=500, detail="JTI 사용 처리 중 오류가 발생했습니다.")
-
-
