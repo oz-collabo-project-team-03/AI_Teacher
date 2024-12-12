@@ -69,12 +69,16 @@ jobs:
       run: |
         if [[ $GITHUB_REF == refs/tags/* ]]; then
           VERSION=${GITHUB_REF#refs/tags/}
+          TAG=$VERSION
         elif [[ $GITHUB_REF == refs/heads/main ]]; then
-          VERSION=main
+          VERSION=main-$(date +%Y%m%d)-$(git rev-parse --short HEAD)
+          TAG=$VERSION
         else
-          VERSION=develop
+          VERSION=dev-$(date +%Y%m%d)-$(git rev-parse --short HEAD)
+          TAG=$VERSION
         fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
 
     - name: Deploy to NCP via SSH
       uses: appleboy/ssh-action@v0.1.6
@@ -86,7 +90,7 @@ jobs:
           set -e
           
           # 이미지 태그 설정
-          IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ steps.version.outputs.version }}"
+          IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ steps.version.outputs.tag }}"
            
           # 최신 Docker 이미지 가져오기
           docker pull $IMAGE
