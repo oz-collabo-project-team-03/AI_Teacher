@@ -25,7 +25,6 @@ async def save_to_redis(key: str, value: str, expiry: int):
 
 
 async def get_from_redis(key: str) -> str | None:
-    # return await redis_client.get(key)
     try:
         return await redis_client.get(key)
     except Exception as e:
