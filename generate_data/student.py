@@ -1,17 +1,13 @@
-import asyncio
 import random
 import string
 from datetime import datetime
 
 from argon2 import PasswordHasher
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.common.models.tag import Tag
 from src.app.v1.user.entity.student import Student
 from src.app.v1.user.entity.user import User
-from src.config.database import SessionLocal
-from src.config.database.postgresql import Base, engine
 
 # 순서 기반 인덱스
 email_counter = 0
@@ -40,6 +36,7 @@ def generate_ordered_phone():
     phone = f"010{phone_counter}"
     phone_counter += 1
     return phone
+
 
 def generate_ordered_profile_image() -> str:
     base_url = "https://kr.object.ncloudstorage.com/backendsam/profile_image/"
