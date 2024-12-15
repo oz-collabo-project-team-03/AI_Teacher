@@ -1,0 +1,12 @@
+.idea
+.vscode
+.github
+.gitmessage.txt
+.git
+.gitignore
+.dockerignore
+Dockerfile
+*.md
+*.sh
+*.yml
+scripts

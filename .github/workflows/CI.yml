@@ -1,0 +1,51 @@
+name: FastAPI CI
+
+# 트리거 이벤트: Pull Request 생성 시 실행
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  ci:
+    # Ubuntu 최신 환경에서 실행
+    runs-on: ubuntu-latest
+
+    # CI 단계 정의
+    steps:
+    - name: Checkout code
+      # 코드 체크아웃
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      # Python 환경 설정
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12.7'
+
+    - name: Install Poetry
+      # Poetry 설치
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "${HOME}/.local/bin" >> $GITHUB_PATH
+
+    - name: Install Dependencies
+      # 종속성 설치
+      run: poetry install --no-interaction --no-root
+
+    - name: Run isort (Import Sorting)
+      # isort로 Import 정렬 검사
+      run: |
+        poetry run isort . 
+
+    - name: Run black (Code Formatting)
+      # black으로 코드 스타일 검사
+      run: |
+        poetry run black .
+
+    # - name: Run mypy (Type Checking)
+    #   # mypy로 타입 검사
+    #   run: |
+    #     poetry run mypy .
+
+

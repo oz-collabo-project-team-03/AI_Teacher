@@ -1,0 +1,143 @@
+name: FastAPI CD
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  release:
+    types: [published]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Generate version tag
+      id: version
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          # For releases
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:$VERSION,${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:latest" >> $GITHUB_OUTPUT
+        elif [[ $GITHUB_REF == refs/heads/main ]]; then
+          # For main branch
+          VERSION=main-$(date +%Y%m%d)-$(git rev-parse --short HEAD)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:$VERSION,${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:main" >> $GITHUB_OUTPUT
+        else
+          # For develop branch
+          VERSION=dev-$(date +%Y%m%d)-$(git rev-parse --short HEAD)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:$VERSION,${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:develop" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.version.outputs.tags }}
+        cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:buildcache
+        cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:buildcache,mode=max
+        build-args: |
+          VERSION=${{ steps.version.outputs.version }}
+
+  deploy-to-ncp:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/')
+
+    steps:
+    - name: Get version tag
+      id: version
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          # For releases
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:$VERSION" >> $GITHUB_OUTPUT
+        elif [[ $GITHUB_REF == refs/heads/main ]]; then
+          # For main branch
+          VERSION=main-$(date +%Y%m%d)-${GITHUB_SHA::7}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:$VERSION" >> $GITHUB_OUTPUT
+        else
+          # For develop branch
+          VERSION=dev-$(date +%Y%m%d)-${GITHUB_SHA::7}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:$VERSION" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Deploy to NCP via SSH
+      uses: appleboy/ssh-action@v0.1.6
+      with:
+        host: ${{ secrets.NCP_SERVER_HOST }}
+        username: root
+        password: ${{ secrets.NCP_SSH_PRIVATE_KEY }}
+        script: |
+          set -e
+          
+          # 이미지 태그 설정
+          IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_REPOSITORY }}:${{ steps.version.outputs.version }}"
+           
+          # 최신 Docker 이미지 가져오기
+          docker pull $IMAGE
+
+          # 기존 컨테이너 중단 및 삭제
+          docker stop sam 2>/dev/null || true
+          docker rm sam 2>/dev/null || true
+
+          cat << EOF > .env
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          SECURE_COOKIE=true
+          PG_DATABASE_URL=${{ secrets.PG_DATABASE_URL }}
+          REDIS_HOST=${{ secrets.REDIS_HOST }}
+          SMTP_USER=${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+          MAIL_TLS=true
+          MAIL_SSL=false
+          NCP_ACCESS_KEY=${{ secrets.NCP_ACCESS_KEY }}
+          NCP_SECRET_KEY=${{ secrets.NCP_SECRET_KEY }}
+          NCP_ENDPOINT=${{ secrets.NCP_ENDPOINT }}
+          NCP_REGION=${{ secrets.NCP_REGION }}
+          NCP_BUCKET_NAME=${{ secrets.NCP_BUCKET_NAME }}
+          MONGO_URL=${{ secrets.MONGO_URL }}
+          MONGO_DB_NAME=${{ secrets.MONGO_DB_NAME }}
+          MONGO_MAX_CONNECTIONS=${{ secrets.MONGO_MAX_CONNECTIONS }}
+          MONGO_MIN_CONNECTIONS=${{ secrets.MONGO_MIN_CONNECTIONS }}
+          KAFKA_SERVER=${{ secrets.KAFKA_SERVER }}
+          CHAT_TOPIC=${{ secrets.CHAT_TOPIC }}
+          CONSUMER_GROUP=${{ secrets.CONSUMER_GROUP }}
+          AI_USER_ID=${{ secrets.AI_USER_ID }}
+          KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+          KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}
+          NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}
+          NAVER_REDIRECT_URI=${{ secrets.NAVER_REDIRECT_URI }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          EOF
+
+          docker run --name sam -d \
+            --env-file .env \
+            -p 8000:8000 \
+            $IMAGE
