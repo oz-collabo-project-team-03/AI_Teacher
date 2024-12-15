@@ -218,7 +218,19 @@ class ConnectionManager:
                 await self.send_message(message)
                 # 텍스트 메시지인 경우에만 AI 응답 생성
                 if message_type == "text":
-                    await self.ai_chat(room, content)
+                    # await self.ai_chat(room, content)
+                    # API Token 절약 버전
+                    temp_message = {
+                        "room_id": room.id,
+                        "title": room.title,
+                        "sender_id": self.ai_user_id,
+                        "content": "죄송합니다. 현재 AI 응답은 임시입니다.",
+                        "message_type": "text",
+                        "filename": "None",
+                        "user_type": "ai",
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                    await self.send_message(temp_message)
             else:
                 # 선생과 학생 대화
                 await self.send_message(message)
