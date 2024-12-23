@@ -75,7 +75,7 @@
 
 ## 1. 백엔드팀
 
-| <a href="https://github.com/hyo00000"><img src="https://avatars.githubusercontent.com/u/57902567?v=4" width=300px/><br/><sub><b>hyo00000</b></sub></a> | <a href="https://github.com/skwwnl"><img src="https://avatars.githubusercontent.com/u/57902567?v=4" width=300px/><br/><sub><b>skwwnl</b></sub></a> | <a href="https://github.com/hwangtate"><img src="https://avatars.githubusercontent.com/u/57902567?v=4" width=300px/><br/><sub><b>hwangtate</b></sub></a> | <a href="https://github.com/moonyu012"><img src="https://avatars.githubusercontent.com/u/57902567?v=4" width=300px/><br/><sub><b>moonyu012</b></sub></a> |
+| <a href="https://github.com/hyo00000"><img src="https://avatars.githubusercontent.com/u/173426190?v=4" width=300px/><br/><sub><b>hyo00000</b></sub></a> | <a href="https://github.com/skwwnl"><img src="https://avatars.githubusercontent.com/u/57902567?v=4" width=300px/><br/><sub><b>skwwnl</b></sub></a> | <a href="https://github.com/hwangtate"><img src="https://avatars.githubusercontent.com/u/173427903?v=4" width=300px/><br/><sub><b>hwangtate</b></sub></a> | <a href="https://github.com/moonyu012"><img src="https://avatars.githubusercontent.com/u/173425482?v=4" width=300px/><br/><sub><b>moonyu012</b></sub></a> |
 | :--------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------: |
 | 김효영 | 김진원 | 황태영 | 문유진 |
 
@@ -85,38 +85,38 @@
 
 ### Backend
 
-> <img src="https://img.shields.io/badge/kong-003459?style=for-the-badge&logo=kong&logoColor=white"/>
-> <img src="https://img.shields.io/badge/fastapi-009688?style=for-the-badge&logo=fastapi&logoColor=white"/>
-> <img src="https://img.shields.io/badge/redis-FF4438?style=for-the-badge&logo=redis&logoColor=white"/>
-> <img src="https://img.shields.io/badge/apache kafka-231F20?style=for-the-badge&logo=apachekafka&logoColor=white"/>
-> <img src="https://img.shields.io/badge/mongodb-47A248?style=for-the-badge&logo=mongodbfka&logoColor=white"/>
-> <img src="https://img.shields.io/badge/postgresql-4169E1?style=for-the-badge&logo=postgresql&logoColor=white"/>
+> <img src="https://img.shields.io/badge/Kong-003459?style=flat-square&logo=Kong&logoColor=white"/>
+> <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=FastAPI&logoColor=white"/>
+> <img src="https://img.shields.io/badge/Redis-FF4438?style=flat-square&logo=Redis&logoColor=white"/>
+> <img src="https://img.shields.io/badge/Apache Kafka-231F20?style=flat-square&logo=ApacheKafka&logoColor=white"/>
+> <img src="https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=MongoDB&logoColor=white"/>
+> <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=PostgreSQL&logoColor=white"/>
 
 ### Frontend
 
->  <img src="https://img.shields.io/badge/typescript-3178C6?style=for-the-badge&logo=typescript&logoColor=white"/>
->  <img src="https://img.shields.io/badge/react.js-61DAFB?style=for-the-badge&logo=react&logoColor=black"/>
->  <img src="https://img.shields.io/badge/zustand-433e38?style=for-the-badge&logo=zustand&logoColor=black"/>
->  <img src="https://img.shields.io/badge/prettier-F7B93E?style=for-the-badge&logo=prettier&logoColor=black"/>
->  <img src="https://img.shields.io/badge/eslint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white"/>
->  <img src="https://img.shields.io/badge/tailwind-06B6D4?style=for-the-badge&logo=tailwind Css&logoColor=white"/></br>
->  <img src="https://img.shields.io/badge/Mock Service Worker-FF6A33?style=for-the-badge&logo=mockserviceworker&logoColor=white"/>
->  <img src="https://img.shields.io/badge/React Query-FF4154?style=for-the-badge&logo=reactquery&logoColor=white"/>
->  <img src="https://img.shields.io/badge/reacthookform-EC5990?style=for-the-badge&logo=reacthookform&logoColor=white"/>
+>  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white"/>
+>  <img src="https://img.shields.io/badge/React.js-61DAFB?style=flat-square&logo=react&logoColor=black"/>
+>  <img src="https://img.shields.io/badge/Zustand-433e38?style=flat-square&logo=zustand&logoColor=black"/>
+>  <img src="https://img.shields.io/badge/Prettier-F7B93E?style=flat-square&logo=prettier&logoColor=black"/>
+>  <img src="https://img.shields.io/badge/Eslint-4B32C3?style=flat-square&logo=eslint&logoColor=white"/>
+>  <img src="https://img.shields.io/badge/Tailwind-06B6D4?style=flat-square&logo=tailwind Css&logoColor=white"/></br>
+>  <img src="https://img.shields.io/badge/Mock Service Worker-FF6A33?style=flat-square&logo=mockserviceworker&logoColor=white"/>
+>  <img src="https://img.shields.io/badge/React Query-FF4154?style=flat-square&logo=reactquery&logoColor=white"/>
+>  <img src="https://img.shields.io/badge/ReactHookForm-EC5990?style=flat-square&logo=ReactHookform&logoColor=white"/>
 
 ### Deployment
 >
-> <img src="https://img.shields.io/badge/github actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white"/>
-> <img src="https://img.shields.io/badge/Naver Cloud Platform-00BC8E?style=for-the-badge&logo=NaverCloudPlatform&logoColor=white"/></br>
+> <img src="https://img.shields.io/badge/GitHub Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white"/>
+> <img src="https://img.shields.io/badge/Naver Cloud Platform-00BC8E?style=flat-square&logo=NaverCloudPlatform&logoColor=white"/></br>
 
 ### Environment
-> <img src="https://img.shields.io/badge/github-181717?style=for-the-badge&logo=github&logoColor=white"/>
-> <img src="https://img.shields.io/badge/git-F24E1E?style=for-the-badge&logo=git&logoColor=white"/>
+> <img bottom="10" height="30" src="https://img.shields.io/badge/GitHub-black?style=flat-square&logo=GitHub&logoColor=white"/>
+> <img height="50" src="https://img.shields.io/badge/Git-F05032?style=flat-square&logo=git&logoColor=white"/>
 
 ### Communication
-> <img src="https://img.shields.io/badge/figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white"/>
-> <img src="https://img.shields.io/badge/notion-181717?style=for-the-badge&logo=notion&logoColor=white"/>
-> <img src="https://img.shields.io/badge/discord-5865F2?style=for-the-badge&logo=discord&logoColor=white"/></br>
+> <img src="https://img.shields.io/badge/Figma-F24E1E?style=flat-square&logo=Figma&logoColor=white"/>
+> <img src="https://img.shields.io/badge/Notion-181717?style=flat-square&logo=Notion&logoColor=white"/>
+> <img src="https://img.shields.io/badge/Discord-5865F2?style=flat-square&logo=Discord&logoColor=white"/></br>
 
 
 <br> </br>
