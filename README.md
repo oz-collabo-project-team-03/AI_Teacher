@@ -107,7 +107,8 @@
 ### Deployment
 >
 > <img src="https://img.shields.io/badge/GitHub Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white"/>
-> <img src="https://img.shields.io/badge/Naver Cloud Platform-00BC8E?style=flat-square&logo=NaverCloudPlatform&logoColor=white"/></br>
+> <img src="https://img.shields.io/badge/Naver Cloud Platform-00BC8E?style=flat-square&logo=Naver&logoColor=white"/>
+> <img src="https://img.shields.io/badge/Nginx-009639?style=flat-square&logo=nginx&logoColor=white"/>
 
 ### Environment
 > <img bottom="10" height="30" src="https://img.shields.io/badge/GitHub-black?style=flat-square&logo=GitHub&logoColor=white"/>
