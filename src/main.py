@@ -100,7 +100,6 @@ async def cors_debugging(request: Request, call_next):
 
 
 origins = [
-    "https://znrrz9fb6257.edge.naverncp.com/",
     "https://sam.kprolabs.space",
     "http://front.suhaengssaem.bucket.s3-website.kr.object.ncloudstorage.com/",
 ]
